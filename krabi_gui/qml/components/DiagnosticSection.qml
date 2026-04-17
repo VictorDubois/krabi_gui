@@ -3,9 +3,9 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    required property var    palette
+    required property var palette
     property string title: ""
-    property var    items:  []
+    default property alias items: itemsColumn.children
 
     color:        root.palette.surface
     radius:       10
@@ -35,15 +35,11 @@ Rectangle {
             color: root.palette.border
         }
 
-        // Items
-        Repeater {
-            model: root.items
-            DiagnosticItem {
-                Layout.fillWidth: true
-                palette: root.palette
-                name:    modelData.name
-                status:  modelData.status
-            }
+        // Items placed here as direct children
+        ColumnLayout {
+            id: itemsColumn
+            Layout.fillWidth: true
+            spacing: 0
         }
 
         Item { Layout.fillHeight: true }

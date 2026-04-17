@@ -16,9 +16,15 @@ try:
 except ImportError:
     _HAS_IMAGE = False
 
+try:
+    from krabi_msgs.msg import Actuators2025
+    _HAS_ACTUATORS = True
+except ImportError:
+    _HAS_ACTUATORS = False
+
 
 class KrabiGuiNode(Node):
-    def __init__(self, robot_status, match, camera_state):
+    def __init__(self, robot_status, match, camera_state, simu: bool = False):
         super().__init__('krabi_gui_node')
         self._robot_status  = robot_status
         self._match         = match
@@ -28,11 +34,15 @@ class KrabiGuiNode(Node):
         self._tf_listener = TransformListener(self._tf_buffer, self)
         self.create_timer(0.05, self._on_tf_timer)  # 20 Hz
 
-        self.create_subscription(Duration, '/krabi_ns/remaining_time',
+        self.create_subscription(Duration, '/remaining_time',
                                  self._on_time, 10)
         if _HAS_IMAGE:
-            self.create_subscription(RosImage, '/krabi_ns/krabi_cam_raw',
-                                     self._on_image, 10)
+            cam_topic = '/krabi_ns/krabi_cam_simu/image_raw' if simu else '/krabi_ns/krabi_cam_raw'
+            self.create_subscription(RosImage, cam_topic, self._on_image, 10)
+
+        if _HAS_ACTUATORS:
+            self.create_subscription(Actuators2025, '/krabi_ns/actuators2026',
+                                     self._on_actuators, 10)
 
         self._team_pub  = self.create_publisher(Bool, '/krabi_ns/is_blue',    1)
         self._start_pub = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
@@ -59,6 +69,9 @@ class KrabiGuiNode(Node):
     def _on_image(self, msg) -> None:
         self._camera_state.update_frame(msg)
 
+    def _on_actuators(self, msg) -> None:
+        self._match.setScore(msg.score)
+
     # ------------------------------------------------------------------
     # Publishers (called from Qt main thread via slots)
     # ------------------------------------------------------------------
@@ -72,9 +85,9 @@ class KrabiGuiNode(Node):
         self._start_pub.publish(m)
 
 
-def start_ros(robot_status, match, camera_state) -> KrabiGuiNode:
+def start_ros(robot_status, match, camera_state, simu: bool = False) -> KrabiGuiNode:
     rclpy.init()
-    node = KrabiGuiNode(robot_status, match, camera_state)
+    node = KrabiGuiNode(robot_status, match, camera_state, simu=simu)
     executor = SingleThreadedExecutor()
     executor.add_node(node)
     threading.Thread(target=executor.spin, daemon=True).start()

@@ -13,7 +13,7 @@ class Match(QObject):
         super().__init__(parent)
         self._team_color     = 'blue'
         self._score          = 0
-        self._time_remaining = 90
+        self._time_remaining = 100
         self._strategy_step  = ''
 
     # ------------------------------------------------------------------

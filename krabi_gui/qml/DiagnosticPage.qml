@@ -23,11 +23,10 @@ Item {
             Layout.fillHeight: true
             palette: root.palette
             title: "Capteurs"
-            items: [
-                { name: "Lidar haut",  status: diagnostics.lidarTop    },
-                { name: "Lidar bas",   status: diagnostics.lidarBottom  },
-                { name: "Caméra",      status: diagnostics.camera       }
-            ]
+
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Lidar haut";  status: diagnostics.lidarTop    }
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Lidar bas";   status: diagnostics.lidarBottom  }
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Caméra";      status: diagnostics.camera       }
         }
 
         DiagnosticSection {
@@ -35,10 +34,9 @@ Item {
             Layout.fillHeight: true
             palette: root.palette
             title: "Cartes"
-            items: [
-                { name: "Moteurs",      status: diagnostics.motorsCard    },
-                { name: "Actionneurs",  status: diagnostics.actuatorsCard }
-            ]
+
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Moteurs";     status: diagnostics.motorsCard    }
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Actionneurs"; status: diagnostics.actuatorsCard }
         }
 
         DiagnosticSection {
@@ -46,11 +44,10 @@ Item {
             Layout.fillHeight: true
             palette: root.palette
             title: "Communications"
-            items: [
-                { name: "Bus CAN",       status: diagnostics.canBus        },
-                { name: "Wi-Fi",         status: diagnostics.wifi          },
-                { name: "Bus Dynamixel", status: diagnostics.dynamixelBus  }
-            ]
+
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus CAN";       status: diagnostics.canBus       }
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Wi-Fi";         status: diagnostics.wifi         }
+            DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus Dynamixel"; status: diagnostics.dynamixelBus }
         }
     }
 }

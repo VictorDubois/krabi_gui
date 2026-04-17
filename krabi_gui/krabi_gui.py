@@ -1,5 +1,6 @@
 """Krabi GUI — main entry point."""
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -20,7 +21,12 @@ except ImportError:
 
 
 def main() -> int:
-    app = QGuiApplication(sys.argv)
+    parser = argparse.ArgumentParser(description='Krabi GUI')
+    parser.add_argument('--simu', action='store_true',
+                        help='Use simulation camera topic instead of real camera')
+    args, qt_args = parser.parse_known_args()
+
+    app = QGuiApplication([sys.argv[0]] + qt_args)
     app.setApplicationName('Krabi GUI')
 
     # Domain objects
@@ -36,7 +42,7 @@ def main() -> int:
             from .ros_node import start_ros
         except ImportError:
             from ros_node import start_ros
-        start_ros(robot_status, match, camera)
+        start_ros(robot_status, match, camera, simu=args.simu)
     except Exception as exc:
         print(f'[krabi_gui] ROS unavailable — running in offline mode: {exc}',
               file=sys.stderr)
