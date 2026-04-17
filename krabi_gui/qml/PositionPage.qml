@@ -38,7 +38,8 @@ Item {
 
             Connections {
                 target: robotStatus
-                function onPoseChanged()     { canvas.requestPaint() }
+                function onPoseChanged()      { canvas.requestPaint() }
+                function onObstaclesChanged() { canvas.requestPaint() }
             }
             Connections {
                 target: match
@@ -139,6 +140,31 @@ Item {
                 ctx.fill()
 
                 ctx.restore()
+
+                // ── Obstacles ──────────────────────────────────────────
+                var obsRadius = Math.max(8, scale * 0.075)
+                var obstacles = [
+                    { x: robotStatus.obstacleFrontX,  y: robotStatus.obstacleFrontY  },
+                    { x: robotStatus.obstacleBehindX, y: robotStatus.obstacleBehindY }
+                ]
+                for (var oi = 0; oi < obstacles.length; oi++) {
+                    var obs = obstacles[oi]
+                    if (isNaN(obs.x) || isNaN(obs.y))
+                        continue
+                    var osx = ox + (root.fieldW / 2 - obs.x) * scale
+                    var osy = oy + (root.fieldH / 2 + obs.y) * scale
+                    ctx.save()
+                    ctx.shadowColor = "rgba(0,0,0,0.55)"
+                    ctx.shadowBlur  = 8
+                    ctx.fillStyle   = "rgba(220,38,38,0.85)"
+                    ctx.strokeStyle = "#ffffff"
+                    ctx.lineWidth   = 1.5
+                    ctx.beginPath()
+                    ctx.arc(osx, osy, obsRadius, 0, Math.PI * 2)
+                    ctx.fill()
+                    ctx.stroke()
+                    ctx.restore()
+                }
             }
         }
 

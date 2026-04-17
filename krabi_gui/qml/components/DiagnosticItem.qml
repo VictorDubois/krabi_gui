@@ -6,6 +6,7 @@ Item {
     required property var    palette
     property string name:   ""
     property bool   status: true
+    property string value:  ""   // when set, shown instead of OK / KO
 
     implicitHeight: 36
 
@@ -37,7 +38,7 @@ Item {
         }
 
         Text {
-            text:  root.status ? "OK" : "KO"
+            text:  root.value !== "" ? root.value : (root.status ? "OK" : "KO")
             color: root.status ? "#22c55e" : "#ef4444"
             font.pixelSize: 12
             font.weight: Font.DemiBold
