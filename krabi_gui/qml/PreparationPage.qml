@@ -139,7 +139,55 @@ Item {
             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor }
         }
 
-        Item { Layout.preferredHeight: 32 }
+        Item { Layout.preferredHeight: 24 }
+
+        // ── Tirette ───────────────────────────────────────────────────
+        Text {
+            Layout.alignment: Qt.AlignHCenter
+            text: "TIRETTE"
+            color: root.palette.textSec
+            font.pixelSize: 11
+            font.letterSpacing: 2
+            font.weight: Font.Medium
+        }
+
+        Item { Layout.preferredHeight: 10 }
+
+        Rectangle {
+            Layout.alignment: Qt.AlignHCenter
+            width: 200; height: 44
+            radius: 10
+            color: tirette.inserted ? "#052e16" : "#1f0e0e"
+            border.color: tirette.inserted ? "#22c55e" : "#ef4444"
+            border.width: 1
+            Behavior on color        { ColorAnimation { duration: 250 } }
+            Behavior on border.color { ColorAnimation { duration: 250 } }
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 8
+
+                Rectangle {
+                    width: 10; height: 10
+                    radius: 5
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: tirette.inserted ? "#22c55e" : "#ef4444"
+                    Behavior on color { ColorAnimation { duration: 250 } }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: tirette.inserted ? "TIRETTE EN PLACE" : "TIRETTE ABSENTE"
+                    color: tirette.inserted ? "#86efac" : "#fca5a5"
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                    Behavior on color { ColorAnimation { duration: 250 } }
+                }
+            }
+        }
+
+        Item { Layout.preferredHeight: 24 }
 
         // ── Actions ───────────────────────────────────────────────────
         Row {

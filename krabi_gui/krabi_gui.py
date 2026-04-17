@@ -14,11 +14,13 @@ try:
     from .robot_status    import RobotStatus
     from .diagnostics     import Diagnostics
     from .camera_provider import CameraProvider, CameraState
+    from .tirette         import Tirette
 except ImportError:
     from match           import Match
     from robot_status    import RobotStatus
     from diagnostics     import Diagnostics
     from camera_provider import CameraProvider, CameraState
+    from tirette         import Tirette
 
 
 def main() -> int:
@@ -43,6 +45,7 @@ def main() -> int:
     diagnostics   = Diagnostics()
     cam_provider  = CameraProvider()
     camera        = CameraState(cam_provider)
+    tirette       = Tirette()
 
     # Start ROS (non-fatal if unavailable)
     try:
@@ -50,7 +53,7 @@ def main() -> int:
             from .ros_node import start_ros
         except ImportError:
             from ros_node import start_ros
-        start_ros(robot_status, match, camera, simu=args.simu)
+        start_ros(robot_status, match, camera, tirette, simu=args.simu)
     except Exception as exc:
         print(f'[krabi_gui] ROS unavailable — running in offline mode: {exc}',
               file=sys.stderr)
@@ -63,6 +66,7 @@ def main() -> int:
     ctx.setContextProperty('robotStatus', robot_status)
     ctx.setContextProperty('diagnostics', diagnostics)
     ctx.setContextProperty('camera',      camera)
+    ctx.setContextProperty('tirette',     tirette)
 
     qml_dir  = Path(__file__).parent / 'qml'
     qml_file = qml_dir / 'main.qml'
