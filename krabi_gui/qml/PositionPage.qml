@@ -155,7 +155,7 @@ Item {
                         var rsw = rhw * 2 * scale
                         var rsh = rhh * 2 * scale
 
-                        ctx.fillStyle   = gcfg[ri] ? "rgba(59,130,246,0.92)" : "rgba(234,179,8,0.92)"
+                        ctx.fillStyle   = gcfg[ri] ? "#005b96" : "#f7b500"
                         ctx.strokeStyle = isSelected ? "#ffffff" : "rgba(255,255,255,0.45)"
                         ctx.lineWidth   = isSelected ? 1.5 : 0.5
                         ctx.fillRect(rsx, rsy, rsw, rsh)
@@ -350,7 +350,7 @@ Item {
                                             y: parent.isH ? ri * (parent.mShort + parent.mGap) : 0
                                             width:  parent.isH ? parent.mLong  : parent.mShort
                                             height: parent.isH ? parent.mShort : parent.mLong
-                                            color:  root.allConfigs[cfgIdx][ri] ? "#3b82f6" : "#eab308"
+                                            color:  root.allConfigs[cfgIdx][ri] ? "#005b96" : "#f7b500"
                                         }
                                     }
                                 }
