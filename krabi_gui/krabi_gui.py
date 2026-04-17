@@ -1,12 +1,13 @@
 """Krabi GUI — main entry point."""
 
 import argparse
+import signal
 import sys
 from pathlib import Path
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, QTimer
 
 try:
     from .match           import Match
@@ -28,6 +29,13 @@ def main() -> int:
 
     app = QGuiApplication([sys.argv[0]] + qt_args)
     app.setApplicationName('Krabi GUI')
+
+    # Allow Ctrl+C to quit: Qt blocks SIGINT by default, so we use a timer to
+    # give Python a chance to process signals, and connect SIGINT to app.quit.
+    signal.signal(signal.SIGINT, lambda *_: app.quit())
+    timer = QTimer()
+    timer.start(200)
+    timer.timeout.connect(lambda: None)
 
     # Domain objects
     match         = Match()
