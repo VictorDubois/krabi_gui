@@ -189,6 +189,38 @@ Item {
 
         Item { Layout.preferredHeight: 24 }
 
+        // ── Recalage ──────────────────────────────────────────────────
+        Rectangle {
+            Layout.alignment: Qt.AlignHCenter
+            width: 200; height: 44
+            radius: 10
+            color: recalageArea.pressed      ? "#1e3a5f"
+                 : recalageArea.containsMouse ? "#1e3a8a"
+                 : root.palette.surface
+            border.color: root.palette.accent
+            border.width: 1
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Text {
+                anchors.centerIn: parent
+                text:  "RECALAGE BORDURE"
+                color: root.palette.accent
+                font.pixelSize:   12
+                font.weight:      Font.DemiBold
+                font.letterSpacing: 1
+            }
+            MouseArea {
+                id: recalageArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape:  Qt.PointingHandCursor
+                onClicked:    match.triggerRecalage()
+            }
+        }
+
+        Item { Layout.preferredHeight: 24 }
+
         // ── Actions ───────────────────────────────────────────────────
         Row {
             Layout.alignment: Qt.AlignHCenter

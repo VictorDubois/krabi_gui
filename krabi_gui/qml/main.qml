@@ -45,4 +45,34 @@ ApplicationWindow {
         CameraPage      { palette: root }
         ScorePage       { palette: root }
     }
+
+    // ── Battery voltages overlay (bottom-right, all pages) ─────────────────
+    Row {
+        anchors.right:        parent.right
+        anchors.bottom:       parent.bottom
+        anchors.rightMargin:  10
+        anchors.bottomMargin: 6
+        spacing: 16
+        z: 1
+
+        Text {
+            text:  isNaN(robotStatus.powerVoltage) ? "P: —V"
+                   : "P: " + robotStatus.powerVoltage.toFixed(1) + "V"
+            color: (!isNaN(robotStatus.powerVoltage) && robotStatus.powerPercentage >= 0.2)
+                   ? root.green : root.red
+            font.pixelSize:  12
+            font.family:     "Monospace"
+            font.weight:     Font.DemiBold
+        }
+
+        Text {
+            text:  isNaN(robotStatus.elecVoltage) ? "E: —V"
+                   : "E: " + robotStatus.elecVoltage.toFixed(1) + "V"
+            color: (!isNaN(robotStatus.elecVoltage) && robotStatus.elecPercentage >= 0.2)
+                   ? root.green : root.red
+            font.pixelSize:  12
+            font.family:     "Monospace"
+            font.weight:     Font.DemiBold
+        }
+    }
 }

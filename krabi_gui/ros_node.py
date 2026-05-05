@@ -34,7 +34,8 @@ except ImportError:
 
 class KrabiGuiNode(Node):
     def __init__(self, robot_status, match, camera_state, tirette,
-                 diagnostics=None, simu: bool = False):
+                 diagnostics=None, publish_tirette: bool = False,
+                 simu: bool = False):
         super().__init__('krabi_gui_node')
         self._robot_status  = robot_status
         self._match         = match
@@ -78,8 +79,15 @@ class KrabiGuiNode(Node):
             self.create_subscription(
                 DiagnosticArray, '/diagnostics', self._on_diagnostics, 10)
 
-        self._team_pub  = self.create_publisher(Bool, '/krabi_ns/is_blue',    1)
-        self._start_pub = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
+        # Team colour: publish when GUI is the authority, subscribe otherwise
+        self._team_pub = None
+        if publish_tirette:
+            self._team_pub = self.create_publisher(Bool, '/krabi_ns/is_blue', 1)
+        else:
+            self.create_subscription(Bool, '/krabi_ns/is_blue', self._on_is_blue, 1)
+
+        self._recalage_pub = self.create_publisher(Bool, '/krabi_ns/recalage', 1)
+        self._start_pub    = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
 
     # ------------------------------------------------------------------
     # ROS callbacks (background thread)
@@ -137,13 +145,21 @@ class KrabiGuiNode(Node):
     def _on_diagnostics(self, msg) -> None:
         self._diagnostics.update_from_diagnostics(msg)
 
+    def _on_is_blue(self, msg: Bool) -> None:
+        self._match.setTeamColor('blue' if msg.data else 'yellow')
+
     # ------------------------------------------------------------------
     # Publishers (called from Qt main thread via slots)
     # ------------------------------------------------------------------
 
     def publish_team(self, is_blue: bool) -> None:
-        m = Bool(); m.data = is_blue
-        self._team_pub.publish(m)
+        if self._team_pub is not None:
+            m = Bool(); m.data = is_blue
+            self._team_pub.publish(m)
+
+    def publish_recalage(self) -> None:
+        m = Bool(); m.data = True
+        self._recalage_pub.publish(m)
 
     def publish_start(self) -> None:
         m = Bool(); m.data = True
@@ -151,10 +167,12 @@ class KrabiGuiNode(Node):
 
 
 def start_ros(robot_status, match, camera_state, tirette,
-              diagnostics=None, simu: bool = False) -> KrabiGuiNode:
+              diagnostics=None, publish_tirette: bool = False,
+              simu: bool = False) -> KrabiGuiNode:
     rclpy.init()
     node = KrabiGuiNode(robot_status, match, camera_state, tirette,
-                        diagnostics=diagnostics, simu=simu)
+                        diagnostics=diagnostics,
+                        publish_tirette=publish_tirette, simu=simu)
     executor = SingleThreadedExecutor()
     executor.add_node(node)
     threading.Thread(target=executor.spin, daemon=True).start()

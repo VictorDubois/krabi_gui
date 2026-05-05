@@ -27,6 +27,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description='Krabi GUI')
     parser.add_argument('--simu', action='store_true',
                         help='Use simulation camera topic instead of real camera')
+    parser.add_argument('--publish-tirette', action='store_true',
+                        help='Publish team colour to /krabi_ns/is_blue (default: subscribe)')
     args, qt_args = parser.parse_known_args()
 
     app = QGuiApplication([sys.argv[0]] + qt_args)
@@ -48,16 +50,26 @@ def main() -> int:
     tirette       = Tirette()
 
     # Start ROS (non-fatal if unavailable)
+    node = None
     try:
         try:
             from .ros_node import start_ros
         except ImportError:
             from ros_node import start_ros
-        start_ros(robot_status, match, camera, tirette,
-                  diagnostics=diagnostics, simu=args.simu)
+        node = start_ros(robot_status, match, camera, tirette,
+                         diagnostics=diagnostics,
+                         publish_tirette=args.publish_tirette,
+                         simu=args.simu)
     except Exception as exc:
         print(f'[krabi_gui] ROS unavailable — running in offline mode: {exc}',
               file=sys.stderr)
+
+    if node is not None:
+        match.recalageRequested.connect(node.publish_recalage)
+        if args.publish_tirette:
+            match.teamColorChanged.connect(
+                lambda: node.publish_team(match.teamColor == 'blue')
+            )
 
     engine = QQmlApplicationEngine()
     engine.addImageProvider('camera', cam_provider)

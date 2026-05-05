@@ -4,10 +4,11 @@ from PySide6.QtCore import QObject, Signal, Property, Slot
 
 
 class Match(QObject):
-    teamColorChanged    = Signal()
-    scoreChanged        = Signal()
-    strategyStepChanged = Signal()
+    teamColorChanged     = Signal()
+    scoreChanged         = Signal()
+    strategyStepChanged  = Signal()
     timeRemainingChanged = Signal()
+    recalageRequested    = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -64,6 +65,10 @@ class Match(QObject):
         if self._strategy_step != step:
             self._strategy_step = step
             self.strategyStepChanged.emit()
+
+    @Slot()
+    def triggerRecalage(self) -> None:
+        self.recalageRequested.emit()
 
     @Slot()
     def start(self) -> None:
