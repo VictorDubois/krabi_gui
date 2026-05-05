@@ -7,6 +7,8 @@ Item {
     id: root
     required property var palette
 
+    property bool _confirmPoweroff: false
+
     Rectangle { anchors.fill: parent; color: root.palette.bg }
 
     ColumnLayout {
@@ -281,6 +283,124 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: match.start()
+                }
+            }
+        }
+    }
+
+    // ── Poweroff button — bottom-left corner ──────────────────────────────
+    Rectangle {
+        anchors.left:         parent.left
+        anchors.bottom:       parent.bottom
+        anchors.leftMargin:   12
+        anchors.bottomMargin: 12
+        width: 96; height: 36
+        radius:       8
+        color:        pwrArea.pressed       ? "#7f1d1d"
+                    : pwrArea.containsMouse ? "#3d1010"
+                    : "#1f0e0e"
+        border.color: "#ef4444"
+        border.width: 1
+        Behavior on color { ColorAnimation { duration: 150 } }
+
+        Text {
+            anchors.centerIn:  parent
+            text:              "ÉTEINDRE"
+            color:             "#fca5a5"
+            font.pixelSize:    12
+            font.weight:       Font.DemiBold
+            font.letterSpacing: 1
+        }
+        MouseArea {
+            id:           pwrArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape:  Qt.PointingHandCursor
+            onClicked:    root._confirmPoweroff = true
+        }
+    }
+
+    // ── Poweroff confirmation overlay ──────────────────────────────────────
+    Rectangle {
+        anchors.fill: parent
+        color:   "#b0000000"
+        visible: root._confirmPoweroff
+        z:       10
+
+        Rectangle {
+            anchors.centerIn: parent
+            width:  320
+            height: 160
+            radius: 16
+            color:        root.palette.surface
+            border.color: "#ef4444"
+            border.width: 2
+
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: 20
+
+                Text {
+                    Layout.alignment:   Qt.AlignHCenter
+                    text:               "ÉTEINDRE LE ROBOT ?"
+                    color:              root.palette.textPri
+                    font.pixelSize:     16
+                    font.weight:        Font.Bold
+                    font.letterSpacing: 1
+                }
+
+                Row {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 16
+
+                    Rectangle {
+                        width: 120; height: 44
+                        radius:       10
+                        color:        cancelPwrArea.pressed ? root.palette.surface2 : root.palette.surface
+                        border.color: root.palette.border
+                        border.width: 1
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text:        "ANNULER"
+                            color:       root.palette.textSec
+                            font.pixelSize: 13
+                            font.weight:    Font.DemiBold
+                        }
+                        MouseArea {
+                            id:           cancelPwrArea
+                            anchors.fill: parent
+                            cursorShape:  Qt.PointingHandCursor
+                            onClicked:    root._confirmPoweroff = false
+                        }
+                    }
+
+                    Rectangle {
+                        width: 120; height: 44
+                        radius:       10
+                        color:        confirmPwrArea.pressed ? "#7f1d1d" : "#1f0e0e"
+                        border.color: "#ef4444"
+                        border.width: 1
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text:        "ÉTEINDRE"
+                            color:       "#fca5a5"
+                            font.pixelSize: 13
+                            font.weight:    Font.DemiBold
+                        }
+                        MouseArea {
+                            id:           confirmPwrArea
+                            anchors.fill: parent
+                            cursorShape:  Qt.PointingHandCursor
+                            onClicked: {
+                                root._confirmPoweroff = false
+                                diagnostics.poweroff()
+                            }
+                        }
+                    }
                 }
             }
         }

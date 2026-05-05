@@ -1,4 +1,4 @@
-"""Live diagnostics: ROS DiagnosticArray + system checks for CAN and WiFi."""
+"""Live diagnostics: ROS DiagnosticArray + system checks for CAN, WiFi, services."""
 
 import os
 import re
@@ -6,14 +6,17 @@ import subprocess
 import threading
 import time
 
-from PySide6.QtCore import QObject, QTimer, Signal, Property
+from PySide6.QtCore import QObject, QTimer, Signal, Property, Slot
+
+_SERVICES = ('krabi_color.service', 'krabi_lidar.service', 'krabi.service')
 
 
 class Diagnostics(QObject):
-    rosItemsChanged = Signal()
-    canBusChanged   = Signal()
-    wifiChanged     = Signal()
-    wifiIpChanged   = Signal()
+    rosItemsChanged  = Signal()
+    canBusChanged    = Signal()
+    wifiChanged      = Signal()
+    wifiIpChanged    = Signal()
+    servicesChanged  = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -21,9 +24,10 @@ class Diagnostics(QObject):
         self._ros_items:  list[dict]      = []
         self._last_ros_time: float        = 0.0
 
-        self._can_bus = False
-        self._wifi    = False
-        self._wifi_ip = ''
+        self._can_bus  = False
+        self._wifi     = False
+        self._wifi_ip  = ''
+        self._services: list[dict] = []
         self._sys_lock = threading.Lock()
 
         self._poll_timer = QTimer(self)
@@ -52,6 +56,18 @@ class Diagnostics(QObject):
     def wifiIp(self) -> str:
         return self._wifi_ip
 
+    @Property('QVariantList', notify=servicesChanged)
+    def services(self) -> list:
+        return self._services
+
+    # ------------------------------------------------------------------ #
+    # Slots                                                                #
+    # ------------------------------------------------------------------ #
+
+    @Slot()
+    def poweroff(self) -> None:
+        subprocess.Popen(['sudo', 'poweroff'])
+
     # ------------------------------------------------------------------ #
     # ROS callback (called from ROS executor thread)                       #
     # ------------------------------------------------------------------ #
@@ -60,7 +76,6 @@ class Diagnostics(QObject):
         self._last_ros_time = time.monotonic()
         for status in msg.status:
             level = status.level
-            # level is int8 in rclpy; guard against bytes representation too
             if isinstance(level, (bytes, bytearray)):
                 level = level[0]
             self._ros_status[status.name] = {
@@ -89,8 +104,9 @@ class Diagnostics(QObject):
         threading.Thread(target=self._check_systems, daemon=True).start()
 
     def _check_systems(self) -> None:
-        can_ok        = _probe_can()
-        wifi_ok, ip   = _probe_wifi_info()
+        can_ok       = _probe_can()
+        wifi_ok, ip  = _probe_wifi_info()
+        new_svcs     = _probe_services()
         with self._sys_lock:
             changes = []
             if self._can_bus != can_ok:
@@ -102,6 +118,9 @@ class Diagnostics(QObject):
             if self._wifi_ip != ip:
                 self._wifi_ip = ip
                 changes.append(self.wifiIpChanged)
+            if new_svcs != self._services:
+                self._services = new_svcs
+                changes.append(self.servicesChanged)
         for sig in changes:
             sig.emit()
 
@@ -123,7 +142,7 @@ def _probe_can() -> bool:
 
 
 def _probe_wifi_info() -> tuple[bool, str]:
-    """Returns (is_up, ip_address). Uses pure sysfs for detection, ip for IP."""
+    """Returns (is_up, ip_address). Uses sysfs for detection, ip for the IP."""
     net_root = '/sys/class/net'
     try:
         for iface in os.listdir(net_root):
@@ -150,3 +169,26 @@ def _get_iface_ip(iface: str) -> str:
         return m.group(1) if m else ''
     except Exception:
         return ''
+
+
+def _probe_services() -> list[dict]:
+    """Returns state dicts for each monitored systemd service."""
+    items = []
+    for svc in _SERVICES:
+        try:
+            r = subprocess.run(
+                ['systemctl', 'is-active', '--', svc],
+                capture_output=True, text=True, timeout=2,
+            )
+            state = r.stdout.strip()
+        except Exception:
+            state = 'unknown'
+        ok      = state == 'active'
+        warning = state in ('activating', 'deactivating', 'reloading')
+        items.append({
+            'name':    svc.removesuffix('.service'),
+            'state':   state,
+            'ok':      ok,
+            'warning': warning,
+        })
+    return items

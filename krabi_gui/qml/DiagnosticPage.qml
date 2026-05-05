@@ -18,7 +18,7 @@ Item {
             Layout.fillHeight: true
             spacing: 12
 
-            // ROS diagnostics card — built manually so ListView can fill height
+            // ── ROS diagnostics ────────────────────────────────────────────
             Rectangle {
                 Layout.fillWidth:  true
                 Layout.fillHeight: true
@@ -32,17 +32,17 @@ Item {
                     spacing: 0
 
                     Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text:            "ROS"
-                        color:           root.palette.textPri
-                        font.pixelSize:  14
-                        font.weight:     Font.DemiBold
+                        Layout.alignment:   Qt.AlignHCenter
+                        text:               "ROS"
+                        color:              root.palette.textPri
+                        font.pixelSize:     14
+                        font.weight:        Font.DemiBold
                         font.letterSpacing: 1
                     }
 
                     Rectangle {
-                        Layout.fillWidth:   true
-                        Layout.topMargin:   10
+                        Layout.fillWidth:    true
+                        Layout.topMargin:    10
                         Layout.bottomMargin: 10
                         height: 1
                         color:  root.palette.border
@@ -77,23 +77,56 @@ Item {
                 }
             }
 
+            // ── Right column: CAN / WiFi / services ────────────────────────
             DiagnosticSection {
-                Layout.fillWidth:        false
-                Layout.preferredWidth:   180
-                Layout.fillHeight:       true
+                Layout.fillWidth:      false
+                Layout.preferredWidth: 180
+                Layout.fillHeight:     true
                 palette: root.palette
-                title: "Système"
+                title:   "Système"
 
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus CAN"; status: diagnostics.canBus }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Wi-Fi";   status: diagnostics.wifi;  value: diagnostics.wifiIp }
+                DiagnosticItem {
+                    Layout.fillWidth: true
+                    palette: root.palette
+                    name:   "Bus CAN"
+                    status: diagnostics.canBus
+                }
+                DiagnosticItem {
+                    Layout.fillWidth: true
+                    palette: root.palette
+                    name:   "Wi-Fi"
+                    status: diagnostics.wifi
+                    value:  diagnostics.wifiIp
+                }
+
+                // Thin separator before services
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color:  root.palette.border
+                }
+
+                Repeater {
+                    model: diagnostics.services
+                    DiagnosticItem {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        palette: root.palette
+                        name:    modelData.name
+                        status:  modelData.ok
+                        warning: modelData.warning
+                        value:   modelData.state
+                    }
+                }
             }
         }
 
+        // ── Batteries ──────────────────────────────────────────────────────
         DiagnosticSection {
-            Layout.fillWidth: true
+            Layout.fillWidth:       true
             Layout.preferredHeight: 140
             palette: root.palette
-            title: "Batteries"
+            title:   "Batteries"
 
             DiagnosticItem {
                 Layout.fillWidth: true
