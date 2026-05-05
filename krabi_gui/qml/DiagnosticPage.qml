@@ -60,9 +60,10 @@ Item {
                             required property var modelData
                             width:   rosList.width
                             palette: root.palette
-                            name:   modelData.name
-                            status: modelData.ok
-                            value:  modelData.message
+                            name:    modelData.name
+                            status:  modelData.ok
+                            warning: modelData.warning
+                            value:   modelData.message
                         }
 
                         Text {
@@ -84,7 +85,7 @@ Item {
                 title: "Système"
 
                 DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus CAN"; status: diagnostics.canBus }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Wi-Fi";   status: diagnostics.wifi   }
+                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Wi-Fi";   status: diagnostics.wifi;  value: diagnostics.wifiIp }
             }
         }
 

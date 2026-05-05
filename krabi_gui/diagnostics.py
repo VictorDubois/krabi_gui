@@ -1,6 +1,7 @@
 """Live diagnostics: ROS DiagnosticArray + system checks for CAN and WiFi."""
 
 import os
+import re
 import subprocess
 import threading
 import time
@@ -12,6 +13,7 @@ class Diagnostics(QObject):
     rosItemsChanged = Signal()
     canBusChanged   = Signal()
     wifiChanged     = Signal()
+    wifiIpChanged   = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -21,6 +23,7 @@ class Diagnostics(QObject):
 
         self._can_bus = False
         self._wifi    = False
+        self._wifi_ip = ''
         self._sys_lock = threading.Lock()
 
         self._poll_timer = QTimer(self)
@@ -45,6 +48,10 @@ class Diagnostics(QObject):
     def wifi(self) -> bool:
         return self._wifi
 
+    @Property(str, notify=wifiIpChanged)
+    def wifiIp(self) -> str:
+        return self._wifi_ip
+
     # ------------------------------------------------------------------ #
     # ROS callback (called from ROS executor thread)                       #
     # ------------------------------------------------------------------ #
@@ -52,8 +59,13 @@ class Diagnostics(QObject):
     def update_from_diagnostics(self, msg) -> None:
         self._last_ros_time = time.monotonic()
         for status in msg.status:
+            level = status.level
+            # level is int8 in rclpy; guard against bytes representation too
+            if isinstance(level, (bytes, bytearray)):
+                level = level[0]
             self._ros_status[status.name] = {
-                'ok':      status.level == b'\x00',
+                'ok':      level == 0,
+                'warning': level == 1,
                 'message': status.message,
             }
         self._emit_ros_items()
@@ -64,7 +76,7 @@ class Diagnostics(QObject):
 
     def _emit_ros_items(self) -> None:
         self._ros_items = [
-            {'name': k, 'ok': v['ok'], 'message': v['message']}
+            {'name': k, 'ok': v['ok'], 'warning': v['warning'], 'message': v['message']}
             for k, v in sorted(self._ros_status.items())
         ]
         self.rosItemsChanged.emit()
@@ -77,17 +89,21 @@ class Diagnostics(QObject):
         threading.Thread(target=self._check_systems, daemon=True).start()
 
     def _check_systems(self) -> None:
-        can_ok  = _probe_can()
-        wifi_ok = _probe_wifi()
+        can_ok        = _probe_can()
+        wifi_ok, ip   = _probe_wifi_info()
         with self._sys_lock:
-            can_changed  = self._can_bus != can_ok
-            wifi_changed = self._wifi    != wifi_ok
-            self._can_bus = can_ok
-            self._wifi    = wifi_ok
-        if can_changed:
-            self.canBusChanged.emit()
-        if wifi_changed:
-            self.wifiChanged.emit()
+            changes = []
+            if self._can_bus != can_ok:
+                self._can_bus = can_ok
+                changes.append(self.canBusChanged)
+            if self._wifi != wifi_ok:
+                self._wifi = wifi_ok
+                changes.append(self.wifiChanged)
+            if self._wifi_ip != ip:
+                self._wifi_ip = ip
+                changes.append(self.wifiIpChanged)
+        for sig in changes:
+            sig.emit()
 
 
 # ------------------------------------------------------------------ #
@@ -106,8 +122,8 @@ def _probe_can() -> bool:
         return False
 
 
-def _probe_wifi() -> bool:
-    """True if at least one wireless interface has operstate == 'up'."""
+def _probe_wifi_info() -> tuple[bool, str]:
+    """Returns (is_up, ip_address). Uses pure sysfs for detection, ip for IP."""
     net_root = '/sys/class/net'
     try:
         for iface in os.listdir(net_root):
@@ -116,9 +132,21 @@ def _probe_wifi() -> bool:
             try:
                 with open(f'{net_root}/{iface}/operstate') as f:
                     if f.read().strip() == 'up':
-                        return True
+                        return True, _get_iface_ip(iface)
             except OSError:
                 continue
     except OSError:
         pass
-    return False
+    return False, ''
+
+
+def _get_iface_ip(iface: str) -> str:
+    try:
+        r = subprocess.run(
+            ['ip', '-4', 'addr', 'show', iface],
+            capture_output=True, text=True, timeout=2,
+        )
+        m = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', r.stdout)
+        return m.group(1) if m else ''
+    except Exception:
+        return ''
