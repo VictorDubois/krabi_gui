@@ -18,36 +18,73 @@ Item {
             Layout.fillHeight: true
             spacing: 12
 
-            DiagnosticSection {
-                Layout.fillWidth: true
+            // ROS diagnostics card — built manually so ListView can fill height
+            Rectangle {
+                Layout.fillWidth:  true
                 Layout.fillHeight: true
-                palette: root.palette
-                title: "Capteurs"
+                color:        root.palette.surface
+                radius:       10
+                border.color: root.palette.border
+                border.width: 1
 
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Lidar haut";  status: diagnostics.lidarTop    }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Lidar bas";   status: diagnostics.lidarBottom  }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Caméra";      status: diagnostics.camera       }
+                ColumnLayout {
+                    anchors { fill: parent; margins: 16 }
+                    spacing: 0
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text:            "ROS"
+                        color:           root.palette.textPri
+                        font.pixelSize:  14
+                        font.weight:     Font.DemiBold
+                        font.letterSpacing: 1
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth:   true
+                        Layout.topMargin:   10
+                        Layout.bottomMargin: 10
+                        height: 1
+                        color:  root.palette.border
+                    }
+
+                    ListView {
+                        id: rosList
+                        Layout.fillWidth:  true
+                        Layout.fillHeight: true
+                        clip:    true
+                        model:   diagnostics.rosItems
+                        spacing: 0
+
+                        delegate: DiagnosticItem {
+                            required property var modelData
+                            width:   rosList.width
+                            palette: root.palette
+                            name:   modelData.name
+                            status: modelData.ok
+                            value:  modelData.message
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            visible:          rosList.count === 0
+                            text:             "Aucun diagnostic reçu"
+                            color:            root.palette.textSec
+                            font.pixelSize:   13
+                        }
+                    }
+                }
             }
 
             DiagnosticSection {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                Layout.fillWidth:        false
+                Layout.preferredWidth:   180
+                Layout.fillHeight:       true
                 palette: root.palette
-                title: "Cartes"
+                title: "Système"
 
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Moteurs";     status: diagnostics.motorsCard    }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Actionneurs"; status: diagnostics.actuatorsCard }
-            }
-
-            DiagnosticSection {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                palette: root.palette
-                title: "Communications"
-
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus CAN";       status: diagnostics.canBus       }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Wi-Fi";         status: diagnostics.wifi         }
-                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus Dynamixel"; status: diagnostics.dynamixelBus }
+                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Bus CAN"; status: diagnostics.canBus }
+                DiagnosticItem { Layout.fillWidth: true; palette: root.palette; name: "Wi-Fi";   status: diagnostics.wifi   }
             }
         }
 

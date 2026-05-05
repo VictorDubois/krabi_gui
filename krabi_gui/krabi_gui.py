@@ -15,7 +15,7 @@ try:
     from .diagnostics     import Diagnostics
     from .camera_provider import CameraProvider, CameraState
     from .tirette         import Tirette
-except ImportError:
+except ImportError as err:
     from match           import Match
     from robot_status    import RobotStatus
     from diagnostics     import Diagnostics
@@ -53,7 +53,8 @@ def main() -> int:
             from .ros_node import start_ros
         except ImportError:
             from ros_node import start_ros
-        start_ros(robot_status, match, camera, tirette, simu=args.simu)
+        start_ros(robot_status, match, camera, tirette,
+                  diagnostics=diagnostics, simu=args.simu)
     except Exception as exc:
         print(f'[krabi_gui] ROS unavailable — running in offline mode: {exc}',
               file=sys.stderr)

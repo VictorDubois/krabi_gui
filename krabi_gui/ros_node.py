@@ -25,14 +25,22 @@ try:
 except ImportError:
     _HAS_ACTUATORS = False
 
+try:
+    from diagnostic_msgs.msg import DiagnosticArray
+    _HAS_DIAGNOSTICS = True
+except ImportError:
+    _HAS_DIAGNOSTICS = False
+
 
 class KrabiGuiNode(Node):
-    def __init__(self, robot_status, match, camera_state, tirette, simu: bool = False):
+    def __init__(self, robot_status, match, camera_state, tirette,
+                 diagnostics=None, simu: bool = False):
         super().__init__('krabi_gui_node')
         self._robot_status  = robot_status
         self._match         = match
         self._camera_state  = camera_state
         self._tirette       = tirette
+        self._diagnostics   = diagnostics
 
         self._tf_buffer   = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
@@ -65,6 +73,10 @@ class KrabiGuiNode(Node):
                                     self._on_elec_battery, 10)
 
         self.create_subscription(Bool, '/krabi_ns/tirette', self._on_tirette, 10)
+
+        if _HAS_DIAGNOSTICS and self._diagnostics is not None:
+            self.create_subscription(
+                DiagnosticArray, '/diagnostics', self._on_diagnostics, 10)
 
         self._team_pub  = self.create_publisher(Bool, '/krabi_ns/is_blue',    1)
         self._start_pub = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
@@ -122,6 +134,9 @@ class KrabiGuiNode(Node):
     def _on_tirette(self, msg: Bool) -> None:
         self._tirette.updateInserted(msg.data)
 
+    def _on_diagnostics(self, msg) -> None:
+        self._diagnostics.update_from_diagnostics(msg)
+
     # ------------------------------------------------------------------
     # Publishers (called from Qt main thread via slots)
     # ------------------------------------------------------------------
@@ -135,9 +150,11 @@ class KrabiGuiNode(Node):
         self._start_pub.publish(m)
 
 
-def start_ros(robot_status, match, camera_state, tirette, simu: bool = False) -> KrabiGuiNode:
+def start_ros(robot_status, match, camera_state, tirette,
+              diagnostics=None, simu: bool = False) -> KrabiGuiNode:
     rclpy.init()
-    node = KrabiGuiNode(robot_status, match, camera_state, tirette, simu=simu)
+    node = KrabiGuiNode(robot_status, match, camera_state, tirette,
+                        diagnostics=diagnostics, simu=simu)
     executor = SingleThreadedExecutor()
     executor.add_node(node)
     threading.Thread(target=executor.spin, daemon=True).start()
