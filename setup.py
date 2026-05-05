@@ -18,7 +18,7 @@ setup(
         ('share/' + package_name + '/res',
             glob('krabi_gui/res/*')),
     ],
-    install_requires=['setuptools', 'PySide6>=6.0'],
+    install_requires=["jinja2", "pyyaml", "typeguard", "numpy", 'setuptools', 'PySide6>=6.0'],
     zip_safe=True,
     maintainer='maximusk',
     maintainer_email='mehdibeniche@gmail.com',
