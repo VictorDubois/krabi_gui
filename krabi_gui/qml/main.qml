@@ -35,10 +35,10 @@ ApplicationWindow {
     // ── Pages ──────────────────────────────────────────────────────────────
     SwipeView {
         id: swipeView
-        objectName: "swipeView"
         anchors.fill: parent
         currentIndex: 0
         clip: true
+        onCurrentIndexChanged: pageController.onPageChanged(currentIndex)
 
         PreparationPage { palette: root }
         PositionPage    { palette: root }

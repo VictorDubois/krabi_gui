@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QObject, QUrl, QTimer
+from PySide6.QtCore import QObject, Slot, QUrl, QTimer
 
 try:
     from .match           import Match
@@ -21,6 +21,30 @@ except ImportError as err:
     from diagnostics     import Diagnostics
     from camera_provider import CameraProvider, CameraState
     from tirette         import Tirette
+
+
+class _PageController(QObject):
+    """Bridges QML page navigation to ROS subscription management."""
+
+    _CARTE_PAGE  = 1
+    _CAMERA_PAGE = 3
+
+    def __init__(self, node, parent=None):
+        super().__init__(parent)
+        self._node = node
+
+    @Slot(int)
+    def onPageChanged(self, index: int) -> None:
+        if self._node is None:
+            return
+        if index == self._CAMERA_PAGE:
+            self._node.enable_camera()
+        else:
+            self._node.disable_camera()
+        if index == self._CARTE_PAGE:
+            self._node.enable_tf()
+        else:
+            self._node.disable_tf()
 
 
 def main() -> int:
@@ -64,9 +88,6 @@ def main() -> int:
         print(f'[krabi_gui] ROS unavailable — running in offline mode: {exc}',
               file=sys.stderr)
 
-    _CARTE_PAGE  = 1
-    _CAMERA_PAGE = 3
-
     if node is not None:
         match.recalageRequested.connect(node.publish_recalage)
         if args.publish_tirette:
@@ -74,15 +95,18 @@ def main() -> int:
                 lambda: node.publish_team(match.teamColor == 'blue')
             )
 
+    page_ctrl = _PageController(node)
+
     engine = QQmlApplicationEngine()
     engine.addImageProvider('camera', cam_provider)
 
     ctx = engine.rootContext()
-    ctx.setContextProperty('match',       match)
-    ctx.setContextProperty('robotStatus', robot_status)
-    ctx.setContextProperty('diagnostics', diagnostics)
-    ctx.setContextProperty('camera',      camera)
-    ctx.setContextProperty('tirette',     tirette)
+    ctx.setContextProperty('match',           match)
+    ctx.setContextProperty('robotStatus',     robot_status)
+    ctx.setContextProperty('diagnostics',     diagnostics)
+    ctx.setContextProperty('camera',          camera)
+    ctx.setContextProperty('tirette',         tirette)
+    ctx.setContextProperty('pageController',  page_ctrl)
 
     qml_dir  = Path(__file__).parent / 'qml'
     qml_file = qml_dir / 'main.qml'
@@ -92,21 +116,8 @@ def main() -> int:
     if not engine.rootObjects():
         return -1
 
-    if node is not None:
-        swipe_view = engine.rootObjects()[0].findChild(QObject, "swipeView")
-        if swipe_view is not None:
-            def _on_page_changed():
-                idx = swipe_view.property("currentIndex")
-                if idx == _CAMERA_PAGE:
-                    node.enable_camera()
-                else:
-                    node.disable_camera()
-                if idx == _CARTE_PAGE:
-                    node.enable_tf()
-                else:
-                    node.disable_tf()
-            swipe_view.currentIndexChanged.connect(_on_page_changed)
-            _on_page_changed()  # apply initial state (page 0 → both inactive)
+    # Apply initial state: page 0 (Prépa) → camera + TF both inactive
+    page_ctrl.onPageChanged(0)
 
     return app.exec()
 
