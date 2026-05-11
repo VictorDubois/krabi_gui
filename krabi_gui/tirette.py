@@ -17,5 +17,5 @@ class Tirette(QObject):
     @Slot(bool)
     def updateInserted(self, value: bool) -> None:
         if self._inserted != value:
-            self._inserted = not value # Tirette GO = dirette is not inserted
+            self._inserted = not value # Tirette GO = tirette is not inserted
             self.insertedChanged.emit()
