@@ -28,7 +28,8 @@ class Diagnostics(QObject):
         self._wifi     = False
         self._wifi_ip  = ''
         self._services: list[dict] = []
-        self._sys_lock = threading.Lock()
+        self._sys_lock     = threading.Lock()
+        self._sys_running  = False
 
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(5000)
@@ -101,6 +102,10 @@ class Diagnostics(QObject):
             if time.monotonic() - self._last_ros_time > 5.0:
                 self._ros_status.clear()
                 self._emit_ros_items()
+        with self._sys_lock:
+            if self._sys_running:
+                return
+            self._sys_running = True
         threading.Thread(target=self._check_systems, daemon=True).start()
 
     def _check_systems(self) -> None:
@@ -108,6 +113,7 @@ class Diagnostics(QObject):
         wifi_ok, ip  = _probe_wifi_info()
         new_svcs     = _probe_services()
         with self._sys_lock:
+            self._sys_running = False
             changes = []
             if self._can_bus != can_ok:
                 self._can_bus = can_ok

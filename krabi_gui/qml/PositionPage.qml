@@ -51,180 +51,204 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ── Canvas ─────────────────────────────────────────────────────
-        Canvas {
-            id: canvas
+        // ── Canvas container ───────────────────────────────────────────
+        Item {
             Layout.fillWidth:  true
             Layout.fillHeight: true
 
-            readonly property url tableUrl: Qt.resolvedUrl("../res/table.png")
+            // ── Static layer: table image, grid, game elements ─────────
+            Canvas {
+                id: staticCanvas
+                anchors.fill: parent
 
-            Component.onCompleted: loadImage(tableUrl)
-            onImageLoaded: requestPaint()
+                readonly property url tableUrl: Qt.resolvedUrl("../res/table.png")
 
-            onWidthChanged:  requestPaint()
-            onHeightChanged: requestPaint()
+                Component.onCompleted: loadImage(tableUrl)
+                onImageLoaded: requestPaint()
 
-            Connections {
-                target: robotStatus
-                function onPoseChanged()      { canvas.requestPaint() }
-                function onObstaclesChanged() { canvas.requestPaint() }
-            }
-            Connections {
-                target: match
-                function onTeamColorChanged() { canvas.requestPaint() }
-            }
-            Connections {
-                target: root
-                function onGroupConfigsChanged()  { canvas.requestPaint() }
-                function onSelectedGroupChanged() { canvas.requestPaint() }
-            }
+                onWidthChanged:  requestPaint()
+                onHeightChanged: requestPaint()
 
-            onPaint: {
-                var ctx = getContext("2d")
-                ctx.clearRect(0, 0, width, height)
-
-                var scale = Math.min(width / root.fieldW, height / root.fieldH)
-                var ox    = (width  - root.fieldW * scale) / 2
-                var oy    = (height - root.fieldH * scale) / 2
-                var fw    = root.fieldW * scale
-                var fh    = root.fieldH * scale
-
-                // ── Table image / fallback ─────────────────────────────
-                if (root.showMap && canvas.isImageLoaded(canvas.tableUrl)) {
-                    ctx.drawImage(canvas.tableUrl, ox, oy, fw, fh)
-                } else {
-                    ctx.fillStyle = "#1a3a2a"
-                    ctx.fillRect(ox, oy, fw, fh)
+                Connections {
+                    target: match
+                    function onTeamColorChanged() { staticCanvas.requestPaint() }
+                }
+                Connections {
+                    target: root
+                    function onGroupConfigsChanged()  { staticCanvas.requestPaint() }
+                    function onSelectedGroupChanged() { staticCanvas.requestPaint() }
                 }
 
-                // Field border
-                ctx.strokeStyle = "rgba(255,255,255,0.5)"
-                ctx.lineWidth   = 2
-                ctx.strokeRect(ox, oy, fw, fh)
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
 
-                // ── Grid ──────────────────────────────────────────────
-                if (root.showGrid) {
-                    ctx.beginPath()
-                    ctx.strokeStyle = "rgba(255,255,255,0.12)"
-                    ctx.lineWidth   = 0.5
-                    for (var yi = 1; yi < 30; yi++) {
-                        var gx = ox + yi * 0.1 * scale
-                        ctx.moveTo(gx, oy); ctx.lineTo(gx, oy + fh)
-                    }
-                    for (var xi = 1; xi < 20; xi++) {
-                        var gy = oy + xi * 0.1 * scale
-                        ctx.moveTo(ox, gy); ctx.lineTo(ox + fw, gy)
-                    }
-                    ctx.stroke()
+                    var scale = Math.min(width / root.fieldW, height / root.fieldH)
+                    var ox    = (width  - root.fieldW * scale) / 2
+                    var oy    = (height - root.fieldH * scale) / 2
+                    var fw    = root.fieldW * scale
+                    var fh    = root.fieldH * scale
 
-                    // 50 cm lines
-                    ctx.beginPath()
-                    ctx.strokeStyle = "rgba(255,255,255,0.28)"
-                    ctx.lineWidth   = 1
-                    for (var yi5 = 1; yi5 < 6; yi5++) {
-                        var gx5 = ox + yi5 * 0.5 * scale
-                        ctx.moveTo(gx5, oy); ctx.lineTo(gx5, oy + fh)
+                    // ── Table image / fallback ─────────────────────────
+                    if (root.showMap && staticCanvas.isImageLoaded(staticCanvas.tableUrl)) {
+                        ctx.drawImage(staticCanvas.tableUrl, ox, oy, fw, fh)
+                    } else {
+                        ctx.fillStyle = "#1a3a2a"
+                        ctx.fillRect(ox, oy, fw, fh)
                     }
-                    for (var xi5 = 1; xi5 < 4; xi5++) {
-                        var gy5 = oy + xi5 * 0.5 * scale
-                        ctx.moveTo(ox, gy5); ctx.lineTo(ox + fw, gy5)
-                    }
-                    ctx.stroke()
-                }
 
-                // ── Game element groups ────────────────────────────────
-                for (var gi = 0; gi < root.groupDefs.length; gi++) {
-                    var gdef       = root.groupDefs[gi]
-                    var gcfg       = root.allConfigs[root.groupConfigs[gi]]
-                    var isSelected = (gi === root.selectedGroup)
+                    // Field border
+                    ctx.strokeStyle = "rgba(255,255,255,0.5)"
+                    ctx.lineWidth   = 2
+                    ctx.strokeRect(ox, oy, fw, fh)
 
-                    for (var ri = 0; ri < 4; ri++) {
-                        var rcx, rcy, rhw, rhh
-                        if (gdef.o === "H") {
-                            // long axis along X, stacked in Y
-                            rcx = gdef.x;                      rcy = gdef.y - 0.075 + ri * 0.05
-                            rhw = 0.075;                       rhh = 0.025
-                        } else {
-                            // long axis along Y, stacked in X
-                            rcx = gdef.x - 0.075 + ri * 0.05; rcy = gdef.y
-                            rhw = 0.025;                       rhh = 0.075
+                    // ── Grid ──────────────────────────────────────────
+                    if (root.showGrid) {
+                        ctx.beginPath()
+                        ctx.strokeStyle = "rgba(255,255,255,0.12)"
+                        ctx.lineWidth   = 0.5
+                        for (var yi = 1; yi < 30; yi++) {
+                            var gx = ox + yi * 0.1 * scale
+                            ctx.moveTo(gx, oy); ctx.lineTo(gx, oy + fh)
                         }
-                        var rsx = ox + (root.fieldW / 2 - rcx - rhw) * scale
-                        var rsy = oy + (root.fieldH / 2 + rcy - rhh) * scale
-                        var rsw = rhw * 2 * scale
-                        var rsh = rhh * 2 * scale
+                        for (var xi = 1; xi < 20; xi++) {
+                            var gy = oy + xi * 0.1 * scale
+                            ctx.moveTo(ox, gy); ctx.lineTo(ox + fw, gy)
+                        }
+                        ctx.stroke()
 
-                        ctx.fillStyle   = gcfg[ri] ? "#005b96" : "#f7b500"
-                        ctx.strokeStyle = isSelected ? "#ffffff" : "rgba(255,255,255,0.45)"
-                        ctx.lineWidth   = isSelected ? 1.5 : 0.5
-                        ctx.fillRect(rsx, rsy, rsw, rsh)
-                        ctx.strokeRect(rsx, rsy, rsw, rsh)
+                        // 50 cm lines
+                        ctx.beginPath()
+                        ctx.strokeStyle = "rgba(255,255,255,0.28)"
+                        ctx.lineWidth   = 1
+                        for (var yi5 = 1; yi5 < 6; yi5++) {
+                            var gx5 = ox + yi5 * 0.5 * scale
+                            ctx.moveTo(gx5, oy); ctx.lineTo(gx5, oy + fh)
+                        }
+                        for (var xi5 = 1; xi5 < 4; xi5++) {
+                            var gy5 = oy + xi5 * 0.5 * scale
+                            ctx.moveTo(ox, gy5); ctx.lineTo(ox + fw, gy5)
+                        }
+                        ctx.stroke()
+                    }
+
+                    // ── Game element groups ────────────────────────────
+                    for (var gi = 0; gi < root.groupDefs.length; gi++) {
+                        var gdef       = root.groupDefs[gi]
+                        var gcfg       = root.allConfigs[root.groupConfigs[gi]]
+                        var isSelected = (gi === root.selectedGroup)
+
+                        for (var ri = 0; ri < 4; ri++) {
+                            var rcx, rcy, rhw, rhh
+                            if (gdef.o === "H") {
+                                // long axis along X, stacked in Y
+                                rcx = gdef.x;                      rcy = gdef.y - 0.075 + ri * 0.05
+                                rhw = 0.075;                       rhh = 0.025
+                            } else {
+                                // long axis along Y, stacked in X
+                                rcx = gdef.x - 0.075 + ri * 0.05; rcy = gdef.y
+                                rhw = 0.025;                       rhh = 0.075
+                            }
+                            var rsx = ox + (root.fieldW / 2 - rcx - rhw) * scale
+                            var rsy = oy + (root.fieldH / 2 + rcy - rhh) * scale
+                            var rsw = rhw * 2 * scale
+                            var rsh = rhh * 2 * scale
+
+                            ctx.fillStyle   = gcfg[ri] ? "#005b96" : "#f7b500"
+                            ctx.strokeStyle = isSelected ? "#ffffff" : "rgba(255,255,255,0.45)"
+                            ctx.lineWidth   = isSelected ? 1.5 : 0.5
+                            ctx.fillRect(rsx, rsy, rsw, rsh)
+                            ctx.strokeRect(rsx, rsy, rsw, rsh)
+                        }
                     }
                 }
+            }
 
-                // ── Robot ─────────────────────────────────────────────
-                var rx    = robotStatus.robotX
-                var ry    = robotStatus.robotY
-                var theta = robotStatus.robotAngle
+            // ── Dynamic layer: robot + obstacles ──────────────────────
+            Canvas {
+                id: dynamicCanvas
+                anchors.fill: parent
 
-                var sx = ox + (root.fieldW / 2 - rx) * scale
-                var sy = oy + (root.fieldH / 2 + ry) * scale
+                onWidthChanged:  requestPaint()
+                onHeightChanged: requestPaint()
 
-                var size   = Math.max(14, scale * 0.11)
-                var tcolor = match.teamColor === "blue" ? "#3b82f6" : "#f59e0b"
+                Connections {
+                    target: robotStatus
+                    function onPoseChanged()      { dynamicCanvas.requestPaint() }
+                    function onObstaclesChanged() { dynamicCanvas.requestPaint() }
+                }
 
-                ctx.save()
-                ctx.translate(sx, sy)
-                ctx.rotate(-theta)
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
 
-                ctx.shadowColor = "rgba(0,0,0,0.55)"
-                ctx.shadowBlur  = 10
+                    var scale = Math.min(width / root.fieldW, height / root.fieldH)
+                    var ox    = (width  - root.fieldW * scale) / 2
+                    var oy    = (height - root.fieldH * scale) / 2
 
-                ctx.fillStyle   = tcolor
-                ctx.strokeStyle = "#ffffff"
-                ctx.lineWidth   = 1.5
-                ctx.beginPath()
-                ctx.moveTo(-size * 1.6,  0)
-                ctx.lineTo( size * 0.8, -size)
-                ctx.lineTo( size * 0.3,  0)
-                ctx.lineTo( size * 0.8,  size)
-                ctx.closePath()
-                ctx.fill()
-                ctx.stroke()
+                    // ── Robot ─────────────────────────────────────────
+                    var rx    = robotStatus.robotX
+                    var ry    = robotStatus.robotY
+                    var theta = robotStatus.robotAngle
 
-                ctx.shadowBlur = 0
+                    var sx = ox + (root.fieldW / 2 - rx) * scale
+                    var sy = oy + (root.fieldH / 2 + ry) * scale
 
-                ctx.fillStyle = "#ffffff"
-                ctx.beginPath()
-                ctx.arc(0, 0, size * 0.18, 0, Math.PI * 2)
-                ctx.fill()
+                    var size   = Math.max(14, scale * 0.11)
+                    var tcolor = match.teamColor === "blue" ? "#3b82f6" : "#f59e0b"
 
-                ctx.restore()
-
-                // ── Obstacles ──────────────────────────────────────────
-                var obsRadius = Math.max(8, scale * 0.075)
-                var obstacles = [
-                    { x: robotStatus.obstacleFrontX,  y: robotStatus.obstacleFrontY  },
-                    { x: robotStatus.obstacleBehindX, y: robotStatus.obstacleBehindY }
-                ]
-                for (var oi = 0; oi < obstacles.length; oi++) {
-                    var obs = obstacles[oi]
-                    if (isNaN(obs.x) || isNaN(obs.y))
-                        continue
-                    var osx = ox + (root.fieldW / 2 - obs.x) * scale
-                    var osy = oy + (root.fieldH / 2 + obs.y) * scale
                     ctx.save()
+                    ctx.translate(sx, sy)
+                    ctx.rotate(-theta)
+
                     ctx.shadowColor = "rgba(0,0,0,0.55)"
-                    ctx.shadowBlur  = 8
-                    ctx.fillStyle   = "rgba(220,38,38,0.85)"
+                    ctx.shadowBlur  = 10
+
+                    ctx.fillStyle   = tcolor
                     ctx.strokeStyle = "#ffffff"
                     ctx.lineWidth   = 1.5
                     ctx.beginPath()
-                    ctx.arc(osx, osy, obsRadius, 0, Math.PI * 2)
+                    ctx.moveTo(-size * 1.6,  0)
+                    ctx.lineTo( size * 0.8, -size)
+                    ctx.lineTo( size * 0.3,  0)
+                    ctx.lineTo( size * 0.8,  size)
+                    ctx.closePath()
                     ctx.fill()
                     ctx.stroke()
+
+                    ctx.shadowBlur = 0
+
+                    ctx.fillStyle = "#ffffff"
+                    ctx.beginPath()
+                    ctx.arc(0, 0, size * 0.18, 0, Math.PI * 2)
+                    ctx.fill()
+
                     ctx.restore()
+
+                    // ── Obstacles ─────────────────────────────────────
+                    var obsRadius = Math.max(8, scale * 0.075)
+                    var obstacles = [
+                        { x: robotStatus.obstacleFrontX,  y: robotStatus.obstacleFrontY  },
+                        { x: robotStatus.obstacleBehindX, y: robotStatus.obstacleBehindY }
+                    ]
+                    for (var oi = 0; oi < obstacles.length; oi++) {
+                        var obs = obstacles[oi]
+                        if (isNaN(obs.x) || isNaN(obs.y))
+                            continue
+                        var osx = ox + (root.fieldW / 2 - obs.x) * scale
+                        var osy = oy + (root.fieldH / 2 + obs.y) * scale
+                        ctx.save()
+                        ctx.shadowColor = "rgba(0,0,0,0.55)"
+                        ctx.shadowBlur  = 8
+                        ctx.fillStyle   = "rgba(220,38,38,0.85)"
+                        ctx.strokeStyle = "#ffffff"
+                        ctx.lineWidth   = 1.5
+                        ctx.beginPath()
+                        ctx.arc(osx, osy, obsRadius, 0, Math.PI * 2)
+                        ctx.fill()
+                        ctx.stroke()
+                        ctx.restore()
+                    }
                 }
             }
 
@@ -233,9 +257,9 @@ Item {
                 anchors.fill: parent
                 enabled: root.selectedGroup < 0
                 onClicked: function(mouse) {
-                    var sc = Math.min(canvas.width / root.fieldW, canvas.height / root.fieldH)
-                    var ox = (canvas.width  - root.fieldW * sc) / 2
-                    var oy = (canvas.height - root.fieldH * sc) / 2
+                    var sc = Math.min(width / root.fieldW, height / root.fieldH)
+                    var ox = (width  - root.fieldW * sc) / 2
+                    var oy = (height - root.fieldH * sc) / 2
 
                     var mapX = root.fieldW / 2 - (mouse.x - ox) / sc
                     var mapY = (mouse.y - oy) / sc - root.fieldH / 2
@@ -278,12 +302,12 @@ Item {
 
                 x: {
                     var px = root.popupScreenX - width / 2
-                    return Math.max(4, Math.min(px, canvas.width  - width  - 4))
+                    return Math.max(4, Math.min(px, parent.width  - width  - 4))
                 }
                 y: {
                     var py = root.popupScreenY - height - 12
                     if (py < 4) py = root.popupScreenY + 12
-                    return Math.max(4, Math.min(py, canvas.height - height - 4))
+                    return Math.max(4, Math.min(py, parent.height - height - 4))
                 }
 
                 radius: 8
@@ -433,7 +457,7 @@ Item {
                     }
                     MouseArea {
                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                        onClicked: { root.showMap = !root.showMap; canvas.requestPaint() }
+                        onClicked: { root.showMap = !root.showMap; staticCanvas.requestPaint() }
                     }
                 }
 
@@ -453,7 +477,7 @@ Item {
                     }
                     MouseArea {
                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                        onClicked: { root.showGrid = !root.showGrid; canvas.requestPaint() }
+                        onClicked: { root.showGrid = !root.showGrid; staticCanvas.requestPaint() }
                     }
                 }
             }

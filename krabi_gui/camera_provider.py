@@ -1,6 +1,7 @@
 """Camera image provider: bridges ROS sensor_msgs/Image to QML."""
 
 import threading
+import time
 
 from PySide6.QtCore import QObject, Signal, Property, QSize
 from PySide6.QtGui import QImage
@@ -59,11 +60,14 @@ class CameraState(QObject):
     frameChanged   = Signal()
     hasFrameChanged = Signal()
 
+    _MAX_FPS = 10
+
     def __init__(self, provider: CameraProvider, parent=None):
         super().__init__(parent)
-        self._provider  = provider
-        self._counter   = 0
-        self._has_frame = False
+        self._provider        = provider
+        self._counter         = 0
+        self._has_frame       = False
+        self._last_frame_time = 0.0
 
     @Property(str, notify=frameChanged)
     def frameUrl(self) -> str:
@@ -76,6 +80,10 @@ class CameraState(QObject):
 
     def update_frame(self, ros_msg) -> None:
         """Called from the ROS background thread."""
+        now = time.monotonic()
+        if now - self._last_frame_time < 1.0 / self._MAX_FPS:
+            return
+        self._last_frame_time = now
         qimage = _ros_image_to_qimage(ros_msg)
         self._provider.update_image(qimage)
         self._counter += 1
