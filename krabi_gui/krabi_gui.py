@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QUrl, QTimer
+from PySide6.QtCore import QObject, QUrl, QTimer
 
 try:
     from .match           import Match
@@ -64,6 +64,9 @@ def main() -> int:
         print(f'[krabi_gui] ROS unavailable — running in offline mode: {exc}',
               file=sys.stderr)
 
+    _CARTE_PAGE  = 1
+    _CAMERA_PAGE = 3
+
     if node is not None:
         match.recalageRequested.connect(node.publish_recalage)
         if args.publish_tirette:
@@ -88,6 +91,22 @@ def main() -> int:
 
     if not engine.rootObjects():
         return -1
+
+    if node is not None:
+        swipe_view = engine.rootObjects()[0].findChild(QObject, "swipeView")
+        if swipe_view is not None:
+            def _on_page_changed():
+                idx = swipe_view.property("currentIndex")
+                if idx == _CAMERA_PAGE:
+                    node.enable_camera()
+                else:
+                    node.disable_camera()
+                if idx == _CARTE_PAGE:
+                    node.enable_tf()
+                else:
+                    node.disable_tf()
+            swipe_view.currentIndexChanged.connect(_on_page_changed)
+            _on_page_changed()  # apply initial state (page 0 → both inactive)
 
     return app.exec()
 

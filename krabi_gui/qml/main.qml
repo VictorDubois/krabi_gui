@@ -35,6 +35,7 @@ ApplicationWindow {
     // ── Pages ──────────────────────────────────────────────────────────────
     SwipeView {
         id: swipeView
+        objectName: "swipeView"
         anchors.fill: parent
         currentIndex: 0
         clip: true

@@ -31,6 +31,16 @@ try:
 except ImportError:
     _HAS_DIAGNOSTICS = False
 
+try:
+    from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+    _CAM_QOS = QoSProfile(
+        depth=1,
+        history=HistoryPolicy.KEEP_LAST,
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+    )
+except Exception:
+    _CAM_QOS = 1  # fallback: plain integer depth
+
 
 class KrabiGuiNode(Node):
     def __init__(self, robot_status, match, camera_state, tirette,
@@ -44,7 +54,8 @@ class KrabiGuiNode(Node):
         self._diagnostics   = diagnostics
 
         self._tf_buffer   = Buffer()
-        self._tf_listener = TransformListener(self._tf_buffer, self)
+        self._tf_listener = None   # created lazily in enable_tf()
+        self._tf_active   = False  # gate for _on_tf_timer
         self.create_timer(0.3, self._on_tf_timer)  # 3.3 Hz
 
         self._obstacle_front_msg:  PoseStamped | None = None
@@ -52,9 +63,12 @@ class KrabiGuiNode(Node):
 
         self.create_subscription(Duration, '/remaining_time',
                                  self._on_time, 10)
+
+        self._cam_topic = None
+        self._cam_sub   = None
         if _HAS_IMAGE:
-            cam_topic = '/krabi_ns/krabi_cam_simu/image_raw' if simu else '/krabi_ns/krabi_cam/image_raw'
-            self.create_subscription(RosImage, cam_topic, self._on_image, 10)
+            self._cam_topic = '/krabi_ns/krabi_cam_simu/image_raw' if simu else '/krabi_ns/krabi_cam/image_raw'
+            # camera subscription created lazily via enable_camera()
 
         if _HAS_ACTUATORS:
             self.create_subscription(Actuators2025, '/krabi_ns/actuators2026',
@@ -90,10 +104,38 @@ class KrabiGuiNode(Node):
         self._start_pub    = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
 
     # ------------------------------------------------------------------
+    # Page-aware subscription management (called from Qt main thread)
+    # ------------------------------------------------------------------
+
+    def enable_camera(self) -> None:
+        if self._cam_sub is None and self._cam_topic is not None:
+            self._cam_sub = self.create_subscription(
+                RosImage, self._cam_topic, self._on_image, _CAM_QOS)
+
+    def disable_camera(self) -> None:
+        if self._cam_sub is not None:
+            self.destroy_subscription(self._cam_sub)
+            self._cam_sub = None
+
+    def enable_tf(self) -> None:
+        if not self._tf_active:
+            self._tf_active   = True
+            self._tf_listener = TransformListener(self._tf_buffer, self)
+
+    def disable_tf(self) -> None:
+        self._tf_active = False
+        if self._tf_listener is not None:
+            self.destroy_subscription(self._tf_listener.tf_sub)
+            self.destroy_subscription(self._tf_listener.tf_static_sub)
+            self._tf_listener = None
+
+    # ------------------------------------------------------------------
     # ROS callbacks (background thread)
     # ------------------------------------------------------------------
 
     def _on_tf_timer(self) -> None:
+        if not self._tf_active:
+            return
         try:
             tf = self._tf_buffer.lookup_transform(
                 'map', 'base_link', rclpy.time.Time())
@@ -173,7 +215,11 @@ def start_ros(robot_status, match, camera_state, tirette,
     node = KrabiGuiNode(robot_status, match, camera_state, tirette,
                         diagnostics=diagnostics,
                         publish_tirette=publish_tirette, simu=simu)
-    executor = SingleThreadedExecutor()
+    try:
+        from rclpy.executors import StaticSingleThreadedExecutor
+        executor = StaticSingleThreadedExecutor()
+    except ImportError:
+        executor = SingleThreadedExecutor()
     executor.add_node(node)
     threading.Thread(target=executor.spin, daemon=True).start()
     return node
