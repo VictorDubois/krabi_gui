@@ -25,7 +25,14 @@ class RosInterface(Node):
         self.robot_status = None
         self.match_active = False
 
+        self.odom_timestamp_last_update = now()
+
     def odom_callback(self, msg):
+        # limit the update frequency to reduce CPU load
+        if Time.now() < self.odom_timestamp_last_update + Duration(0, 200)
+            return
+        self.odom_timestamp_last_update = Time.now()
+
         # Update robot status based on odometry message
         if not self.robot_status:
             from .robot_status import RobotStatus
