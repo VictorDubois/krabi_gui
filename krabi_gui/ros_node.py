@@ -53,7 +53,7 @@ class KrabiGuiNode(Node):
         self.create_subscription(Duration, '/remaining_time',
                                  self._on_time, 10)
         if _HAS_IMAGE:
-            cam_topic = '/krabi_ns/krabi_cam_simu/image_raw' if simu else '/krabi_ns/krabi_cam_raw'
+            cam_topic = '/krabi_ns/krabi_cam_simu/image_raw' if simu else '/krabi_ns/krabi_cam/image_raw'
             self.create_subscription(RosImage, cam_topic, self._on_image, 10)
 
         if _HAS_ACTUATORS:
