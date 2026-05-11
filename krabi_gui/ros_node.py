@@ -45,7 +45,7 @@ class KrabiGuiNode(Node):
 
         self._tf_buffer   = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
-        self.create_timer(0.05, self._on_tf_timer)  # 20 Hz
+        self.create_timer(0.3, self._on_tf_timer)  # 3.3 Hz
 
         self._obstacle_front_msg:  PoseStamped | None = None
         self._obstacle_behind_msg: PoseStamped | None = None
