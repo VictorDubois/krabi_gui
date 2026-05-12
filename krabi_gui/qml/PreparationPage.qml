@@ -290,6 +290,7 @@ Item {
 
     // ── Poweroff button — bottom-left corner ──────────────────────────────
     Rectangle {
+        id:                   pwrBtn
         anchors.left:         parent.left
         anchors.bottom:       parent.bottom
         anchors.leftMargin:   12
@@ -317,6 +318,75 @@ Item {
             hoverEnabled: true
             cursorShape:  Qt.PointingHandCursor
             onClicked:    root._confirmPoweroff = true
+        }
+    }
+
+    // ── REC toggle — bottom-left, right of poweroff ───────────────────────
+    Rectangle {
+        anchors.left:         pwrBtn.right
+        anchors.bottom:       parent.bottom
+        anchors.leftMargin:   8
+        anchors.bottomMargin: 12
+        width: 80; height: 36
+        radius:       8
+        color:        diagnostics.recording ? "#7f1d1d" : "#1a1000"
+        border.color: diagnostics.recording ? "#ef4444" : "#374151"
+        border.width: 1
+        Behavior on color        { ColorAnimation { duration: 150 } }
+        Behavior on border.color { ColorAnimation { duration: 150 } }
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 6
+
+            Rectangle {
+                width: 8; height: 8; radius: 4
+                anchors.verticalCenter: parent.verticalCenter
+                color: diagnostics.recording ? "#ef4444" : "#374151"
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text:  "REC"
+                color: diagnostics.recording ? "#fca5a5" : "#6b7280"
+                font.pixelSize: 12; font.family: "Monospace"; font.weight: Font.Bold
+            }
+        }
+        MouseArea {
+            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+            onClicked: diagnostics.toggleRecording()
+        }
+    }
+
+    // ── Restart krabi_color — bottom-right corner ──────────────────────────
+    Rectangle {
+        anchors.right:        parent.right
+        anchors.bottom:       parent.bottom
+        anchors.rightMargin:  12
+        anchors.bottomMargin: 12
+        width: 124; height: 36
+        radius:       8
+        color:        restartArea.pressed       ? "#422006"
+                    : restartArea.containsMouse ? "#2a1a00"
+                    : "#1a1000"
+        border.color: "#f59e0b"
+        border.width: 1
+        Behavior on color { ColorAnimation { duration: 150 } }
+
+        Text {
+            anchors.centerIn:   parent
+            text:               "RESTART COLOR"
+            color:              "#fcd34d"
+            font.pixelSize:     11
+            font.weight:        Font.DemiBold
+            font.letterSpacing: 1
+        }
+        MouseArea {
+            id:           restartArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape:  Qt.PointingHandCursor
+            onClicked:    diagnostics.restartKrabiColor()
         }
     }
 

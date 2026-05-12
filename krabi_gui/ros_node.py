@@ -61,7 +61,7 @@ class KrabiGuiNode(Node):
         self._obstacle_front_msg:  PoseStamped | None = None
         self._obstacle_behind_msg: PoseStamped | None = None
 
-        self.create_subscription(Duration, '/remaining_time',
+        self.create_subscription(Duration, '/krabi_ns/remaining_time',
                                  self._on_time, 10)
 
         self._cam_topic = None
@@ -116,6 +116,13 @@ class KrabiGuiNode(Node):
         if self._cam_sub is not None:
             self.destroy_subscription(self._cam_sub)
             self._cam_sub = None
+
+    def set_camera_topic(self, topic: str) -> None:
+        self._cam_topic = topic
+        if self._cam_sub is not None:
+            self.destroy_subscription(self._cam_sub)
+            self._cam_sub = self.create_subscription(
+                RosImage, self._cam_topic, self._on_image, _CAM_QOS)
 
     def enable_tf(self) -> None:
         if not self._tf_active:

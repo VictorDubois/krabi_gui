@@ -22,7 +22,7 @@ Item {
     Rectangle {
         anchors.centerIn: parent
         visible:  !camera.hasFrame
-        width:    220; height: 80
+        width:    240; height: 80
         radius:   12
         color:    "#1a1a2e"
         border.color: "#2c3354"
@@ -41,7 +41,7 @@ Item {
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "/krabi_ns/krabi_cam_raw"
+                text: pageController.cameraTopicName
                 color: "#374151"
                 font.pixelSize: 11
                 font.family: "Monospace"
@@ -49,22 +49,29 @@ Item {
         }
     }
 
-    // Topic badge (bottom-right)
+    // ── Camera source toggle (bottom-right) ────────────────────────────────
     Rectangle {
         anchors { right: parent.right; bottom: parent.bottom; margins: 10 }
-        visible: camera.hasFrame
-        height: 22
-        width: topicLabel.implicitWidth + 16
-        radius: 4
-        color: "#111827cc"
+        height: 28
+        width:  switchLabel.implicitWidth + 28
+        radius: 6
+        color:        pageController.debugCamera ? "#1e2d40" : "#111827cc"
+        border.color: pageController.debugCamera ? "#3b82f6" : "#374151"
+        border.width: 1
+        Behavior on color        { ColorAnimation { duration: 150 } }
+        Behavior on border.color { ColorAnimation { duration: 150 } }
 
         Text {
-            id: topicLabel
+            id: switchLabel
             anchors.centerIn: parent
-            text: "/krabi_ns/krabi_cam_raw"
-            color: "#6b7280"
-            font.pixelSize: 10
-            font.family: "Monospace"
+            text:  pageController.debugCamera ? "DEBUG" : "MAIN"
+            color: pageController.debugCamera ? "#93c5fd" : "#6b7280"
+            font.pixelSize: 11; font.family: "Monospace"; font.weight: Font.Bold
+            Behavior on color { ColorAnimation { duration: 150 } }
+        }
+        MouseArea {
+            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+            onClicked: pageController.toggleCamera()
         }
     }
 }

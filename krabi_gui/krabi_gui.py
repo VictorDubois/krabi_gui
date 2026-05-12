@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QObject, Slot, QUrl, QTimer
+from PySide6.QtCore import Property, QObject, Signal, Slot, QUrl, QTimer
 
 try:
     from .match           import Match
@@ -23,15 +23,22 @@ except ImportError as err:
     from tirette         import Tirette
 
 
+_MAIN_CAM  = '/krabi_ns/krabi_cam/image_raw'
+_DEBUG_CAM = '/krabi_ns/debug_image'
+
+
 class _PageController(QObject):
     """Bridges QML page navigation to ROS subscription management."""
 
     _CARTE_PAGE  = 1
     _CAMERA_PAGE = 3
 
+    cameraTopicChanged = Signal()
+
     def __init__(self, node, parent=None):
         super().__init__(parent)
-        self._node = node
+        self._node      = node
+        self._debug_cam = False
 
     @Slot(int)
     def onPageChanged(self, index: int) -> None:
@@ -45,6 +52,22 @@ class _PageController(QObject):
             self._node.enable_tf()
         else:
             self._node.disable_tf()
+
+    @Property(str, notify=cameraTopicChanged)
+    def cameraTopicName(self) -> str:
+        return _DEBUG_CAM if self._debug_cam else _MAIN_CAM
+
+    @Property(bool, notify=cameraTopicChanged)
+    def debugCamera(self) -> bool:
+        return self._debug_cam
+
+    @Slot()
+    def toggleCamera(self) -> None:
+        if self._node is None:
+            return
+        self._debug_cam = not self._debug_cam
+        self._node.set_camera_topic(self.cameraTopicName)
+        self.cameraTopicChanged.emit()
 
 
 def main() -> int:

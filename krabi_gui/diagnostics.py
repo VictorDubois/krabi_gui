@@ -8,7 +8,8 @@ import time
 
 from PySide6.QtCore import QObject, QTimer, Signal, Property, Slot
 
-_SERVICES = ('krabi_color.service', 'krabi_lidar.service', 'krabi.service')
+_SERVICES    = ('krabi_color.service', 'krabi_lidar.service', 'krabi.service')
+_RECORD_FLAG = '/var/log/krabi/do_record'
 
 
 class Diagnostics(QObject):
@@ -17,6 +18,7 @@ class Diagnostics(QObject):
     wifiChanged      = Signal()
     wifiIpChanged    = Signal()
     servicesChanged  = Signal()
+    recordingChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -30,6 +32,7 @@ class Diagnostics(QObject):
         self._services: list[dict] = []
         self._sys_lock     = threading.Lock()
         self._sys_running  = False
+        self._recording    = os.path.exists(_RECORD_FLAG)
 
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(5000)
@@ -61,6 +64,10 @@ class Diagnostics(QObject):
     def services(self) -> list:
         return self._services
 
+    @Property(bool, notify=recordingChanged)
+    def recording(self) -> bool:
+        return self._recording
+
     # ------------------------------------------------------------------ #
     # Slots                                                                #
     # ------------------------------------------------------------------ #
@@ -68,6 +75,25 @@ class Diagnostics(QObject):
     @Slot()
     def poweroff(self) -> None:
         subprocess.Popen(['sudo', 'poweroff'])
+
+    @Slot()
+    def toggleRecording(self) -> None:
+        if self._recording:
+            try:
+                os.remove(_RECORD_FLAG)
+            except OSError:
+                pass
+        else:
+            try:
+                open(_RECORD_FLAG, 'w').close()
+            except OSError:
+                pass
+        self._recording = os.path.exists(_RECORD_FLAG)
+        self.recordingChanged.emit()
+
+    @Slot()
+    def restartKrabiColor(self) -> None:
+        subprocess.Popen(['sudo', 'systemctl', 'restart', 'krabi_color.service'])
 
     # ------------------------------------------------------------------ #
     # ROS callback (called from ROS executor thread)                       #
