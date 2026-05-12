@@ -221,5 +221,12 @@ def start_ros(robot_status, match, camera_state, tirette,
     except ImportError:
         executor = SingleThreadedExecutor()
     executor.add_node(node)
-    threading.Thread(target=executor.spin, daemon=True).start()
+
+    def _spin():
+        try:
+            executor.spin()
+        except Exception:
+            pass  # ExternalShutdownException on clean exit; ignore all shutdown races
+
+    threading.Thread(target=_spin, daemon=True).start()
     return node
