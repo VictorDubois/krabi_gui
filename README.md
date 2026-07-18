@@ -14,5 +14,4 @@ Compatible with ROS messages from anywhere, so can be tested from simulation, or
 
 To start: source the venv + ROS environment, go to the krabi_gui folder, and run python3 ./krabi_gui.py
 
-On the real robot, there is a service dedicated: krabi_gui.service
-@TODO: commit and push startKrabuiGui.sh
+On the real robot, there is a service dedicated: [krabi_gui.service](https://github.com/VictorDubois/krabi-startscripts/blob/main/krabi_gui.service)
