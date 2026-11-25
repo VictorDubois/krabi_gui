@@ -8,11 +8,12 @@ class Match(QObject):
     scoreChanged         = Signal()
     strategyStepChanged  = Signal()
     timeRemainingChanged = Signal()
-    recalageRequested    = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, color_editable=False):
         super().__init__(parent)
         self._team_color     = 'blue'
+        self._color_editable = color_editable   # the GUI is the authority
+        self._color_known    = color_editable   # False until read from the robot
         self._score          = 0
         self._time_remaining = 100
         self._strategy_step  = ''
@@ -24,6 +25,14 @@ class Match(QObject):
     @Property(str, notify=teamColorChanged)
     def teamColor(self) -> str:
         return self._team_color
+
+    @Property(bool, notify=teamColorChanged)
+    def teamColorKnown(self) -> bool:
+        return self._color_known
+
+    @Property(bool, notify=teamColorChanged)
+    def teamColorEditable(self) -> bool:
+        return self._color_editable
 
     @Property(int, notify=scoreChanged)
     def score(self) -> int:
@@ -43,8 +52,9 @@ class Match(QObject):
 
     @Slot(str)
     def setTeamColor(self, color: str) -> None:
-        if self._team_color != color:
+        if self._team_color != color or not self._color_known:
             self._team_color = color
+            self._color_known = True
             self.teamColorChanged.emit()
 
     @Slot(int)
@@ -65,10 +75,6 @@ class Match(QObject):
         if self._strategy_step != step:
             self._strategy_step = step
             self.strategyStepChanged.emit()
-
-    @Slot()
-    def triggerRecalage(self) -> None:
-        self.recalageRequested.emit()
 
     @Slot()
     def start(self) -> None:

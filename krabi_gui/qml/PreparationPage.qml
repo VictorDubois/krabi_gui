@@ -7,7 +7,9 @@ Item {
     id: root
     required property var palette
 
-    property bool _confirmPoweroff: false
+    // After RESTART COLOR, the old stack may still be talking
+    readonly property string robotColor: match.teamColorKnown && !preMatch.restarting ? match.teamColor : ""
+    readonly property bool tiretteKnown: tirette.known && !preMatch.restarting
 
     Rectangle { anchors.fill: parent; color: root.palette.bg }
 
@@ -19,7 +21,9 @@ Item {
         // ── Team colour ───────────────────────────────────────────────
         Text {
             Layout.alignment: Qt.AlignHCenter
-            text: "COULEUR D'ÉQUIPE"
+            text: match.teamColorEditable ? "COULEUR D'ÉQUIPE"
+                : root.robotColor !== ""  ? "COULEUR LUE PAR LE ROBOT"
+                :                           "COULEUR PAS ENCORE LUE"
             color: root.palette.textSec
             font.pixelSize: 11
             font.letterSpacing: 2
@@ -36,9 +40,9 @@ Item {
             Rectangle {
                 width: 160; height: 72
                 radius: 12
-                color:        match.teamColor === "blue" ? "#1e3a8a" : root.palette.surface
-                border.color: match.teamColor === "blue" ? "#3b82f6" : root.palette.border
-                border.width: match.teamColor === "blue" ? 2 : 1
+                color:        root.robotColor === "blue" ? "#1e3a8a" : root.palette.surface
+                border.color: root.robotColor === "blue" ? "#3b82f6" : root.palette.border
+                border.width: root.robotColor === "blue" ? 2 : 1
 
                 Behavior on color        { ColorAnimation { duration: 200 } }
                 Behavior on border.color { ColorAnimation { duration: 200 } }
@@ -48,7 +52,7 @@ Item {
                     anchors.fill: parent; radius: parent.radius
                     color: "transparent"
                     border.color: "#3b82f6"
-                    border.width: match.teamColor === "blue" ? 6 : 0
+                    border.width: root.robotColor === "blue" ? 6 : 0
                     opacity: 0.25
                     Behavior on border.width { NumberAnimation { duration: 200 } }
                 }
@@ -56,7 +60,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "BLEU"
-                    color: match.teamColor === "blue" ? "#93c5fd" : root.palette.textSec
+                    color: root.robotColor === "blue" ? "#93c5fd" : root.palette.textSec
                     font.pixelSize: 18
                     font.weight: Font.Bold
                     font.letterSpacing: 2
@@ -66,6 +70,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
+                    enabled: match.teamColorEditable
                     onClicked: match.setTeamColor("blue")
                 }
             }
@@ -74,9 +79,9 @@ Item {
             Rectangle {
                 width: 160; height: 72
                 radius: 12
-                color:        match.teamColor === "yellow" ? "#422006" : root.palette.surface
-                border.color: match.teamColor === "yellow" ? "#f59e0b" : root.palette.border
-                border.width: match.teamColor === "yellow" ? 2 : 1
+                color:        root.robotColor === "yellow" ? "#422006" : root.palette.surface
+                border.color: root.robotColor === "yellow" ? "#f59e0b" : root.palette.border
+                border.width: root.robotColor === "yellow" ? 2 : 1
 
                 Behavior on color        { ColorAnimation { duration: 200 } }
                 Behavior on border.color { ColorAnimation { duration: 200 } }
@@ -85,7 +90,7 @@ Item {
                     anchors.fill: parent; radius: parent.radius
                     color: "transparent"
                     border.color: "#f59e0b"
-                    border.width: match.teamColor === "yellow" ? 6 : 0
+                    border.width: root.robotColor === "yellow" ? 6 : 0
                     opacity: 0.25
                     Behavior on border.width { NumberAnimation { duration: 200 } }
                 }
@@ -93,7 +98,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "JAUNE"
-                    color: match.teamColor === "yellow" ? "#fcd34d" : root.palette.textSec
+                    color: root.robotColor === "yellow" ? "#fcd34d" : root.palette.textSec
                     font.pixelSize: 18
                     font.weight: Font.Bold
                     font.letterSpacing: 2
@@ -103,6 +108,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
+                    enabled: match.teamColorEditable
                     onClicked: match.setTeamColor("yellow")
                 }
             }
@@ -159,8 +165,8 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             width: 200; height: 44
             radius: 10
-            color: tirette.inserted ? "#052e16" : "#1f0e0e"
-            border.color: tirette.inserted ? "#22c55e" : "#ef4444"
+            color: !root.tiretteKnown ? root.palette.surface : tirette.inserted ? "#052e16" : "#1f0e0e"
+            border.color: !root.tiretteKnown ? root.palette.border : tirette.inserted ? "#22c55e" : "#ef4444"
             border.width: 1
             Behavior on color        { ColorAnimation { duration: 250 } }
             Behavior on border.color { ColorAnimation { duration: 250 } }
@@ -173,51 +179,19 @@ Item {
                     width: 10; height: 10
                     radius: 5
                     anchors.verticalCenter: parent.verticalCenter
-                    color: tirette.inserted ? "#22c55e" : "#ef4444"
+                    color: !root.tiretteKnown ? root.palette.border : tirette.inserted ? "#22c55e" : "#ef4444"
                     Behavior on color { ColorAnimation { duration: 250 } }
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: tirette.inserted ? "TIRETTE EN PLACE" : "TIRETTE ABSENTE"
-                    color: tirette.inserted ? "#86efac" : "#fca5a5"
+                    text: !root.tiretteKnown ? "TIRETTE ?" : tirette.inserted ? "TIRETTE EN PLACE" : "TIRETTE ABSENTE"
+                    color: !root.tiretteKnown ? root.palette.textSec : tirette.inserted ? "#86efac" : "#fca5a5"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1
                     Behavior on color { ColorAnimation { duration: 250 } }
                 }
-            }
-        }
-
-        Item { Layout.preferredHeight: 24 }
-
-        // ── Recalage ──────────────────────────────────────────────────
-        Rectangle {
-            Layout.alignment: Qt.AlignHCenter
-            width: 200; height: 44
-            radius: 10
-            color: recalageArea.pressed      ? "#1e3a5f"
-                 : recalageArea.containsMouse ? "#1e3a8a"
-                 : root.palette.surface
-            border.color: root.palette.accent
-            border.width: 1
-
-            Behavior on color { ColorAnimation { duration: 150 } }
-
-            Text {
-                anchors.centerIn: parent
-                text:  "RECALAGE BORDURE"
-                color: root.palette.accent
-                font.pixelSize:   12
-                font.weight:      Font.DemiBold
-                font.letterSpacing: 1
-            }
-            MouseArea {
-                id: recalageArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape:  Qt.PointingHandCursor
-                onClicked:    match.triggerRecalage()
             }
         }
 
@@ -317,7 +291,7 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape:  Qt.PointingHandCursor
-            onClicked:    root._confirmPoweroff = true
+            onClicked:    confirmPoweroff.visible = true
         }
     }
 
@@ -369,14 +343,14 @@ Item {
         color:        restartArea.pressed       ? "#422006"
                     : restartArea.containsMouse ? "#2a1a00"
                     : "#1a1000"
-        border.color: "#f59e0b"
+        border.color: preMatch.canRestart ? "#f59e0b" : root.palette.border
         border.width: 1
         Behavior on color { ColorAnimation { duration: 150 } }
 
         Text {
             anchors.centerIn:   parent
             text:               "RESTART COLOR"
-            color:              "#fcd34d"
+            color:              preMatch.canRestart ? "#fcd34d" : root.palette.textSec
             font.pixelSize:     11
             font.weight:        Font.DemiBold
             font.letterSpacing: 1
@@ -384,95 +358,30 @@ Item {
         MouseArea {
             id:           restartArea
             anchors.fill: parent
+            enabled:      preMatch.canRestart   // never during a match
             hoverEnabled: true
             cursorShape:  Qt.PointingHandCursor
-            onClicked:    diagnostics.restartKrabiColor()
+            onClicked:    confirmRestart.visible = true
         }
     }
 
-    // ── Poweroff confirmation overlay ──────────────────────────────────────
-    Rectangle {
-        anchors.fill: parent
-        color:   "#b0000000"
-        visible: root._confirmPoweroff
-        z:       10
+    ConfirmDialog {
+        id: confirmRestart
+        palette:     root.palette
+        title:       "RELANCER LE ROBOT ?"
+        detail:      "ROS redémarre : la couleur est relue, le recalage et la position sont remis à zéro."
+        confirmText: "RELANCER"
+        accent:      "#f59e0b"
+        accentBg:    "#1a1000"
+        accentText:  "#fcd34d"
+        onConfirmed: preMatch.restart()
+    }
 
-        Rectangle {
-            anchors.centerIn: parent
-            width:  320
-            height: 160
-            radius: 16
-            color:        root.palette.surface
-            border.color: "#ef4444"
-            border.width: 2
-
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: 20
-
-                Text {
-                    Layout.alignment:   Qt.AlignHCenter
-                    text:               "ÉTEINDRE LE ROBOT ?"
-                    color:              root.palette.textPri
-                    font.pixelSize:     16
-                    font.weight:        Font.Bold
-                    font.letterSpacing: 1
-                }
-
-                Row {
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 16
-
-                    Rectangle {
-                        width: 120; height: 44
-                        radius:       10
-                        color:        cancelPwrArea.pressed ? root.palette.surface2 : root.palette.surface
-                        border.color: root.palette.border
-                        border.width: 1
-                        Behavior on color { ColorAnimation { duration: 150 } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text:        "ANNULER"
-                            color:       root.palette.textSec
-                            font.pixelSize: 13
-                            font.weight:    Font.DemiBold
-                        }
-                        MouseArea {
-                            id:           cancelPwrArea
-                            anchors.fill: parent
-                            cursorShape:  Qt.PointingHandCursor
-                            onClicked:    root._confirmPoweroff = false
-                        }
-                    }
-
-                    Rectangle {
-                        width: 120; height: 44
-                        radius:       10
-                        color:        confirmPwrArea.pressed ? "#7f1d1d" : "#1f0e0e"
-                        border.color: "#ef4444"
-                        border.width: 1
-                        Behavior on color { ColorAnimation { duration: 150 } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text:        "ÉTEINDRE"
-                            color:       "#fca5a5"
-                            font.pixelSize: 13
-                            font.weight:    Font.DemiBold
-                        }
-                        MouseArea {
-                            id:           confirmPwrArea
-                            anchors.fill: parent
-                            cursorShape:  Qt.PointingHandCursor
-                            onClicked: {
-                                root._confirmPoweroff = false
-                                diagnostics.poweroff()
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    ConfirmDialog {
+        id: confirmPoweroff
+        palette:     root.palette
+        title:       "ÉTEINDRE LE ROBOT ?"
+        confirmText: "ÉTEINDRE"
+        onConfirmed: diagnostics.poweroff()
     }
 }

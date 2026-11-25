@@ -11,7 +11,7 @@ import tf2_geometry_msgs  # noqa: F401 — registers PoseStamped transform suppo
 from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import BatteryState
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 
 try:
     from sensor_msgs.msg import Image as RosImage
@@ -24,6 +24,13 @@ try:
     _HAS_ACTUATORS = True
 except ImportError:
     _HAS_ACTUATORS = False
+
+try:
+    from krabi_msgs.msg import RecalageZones
+    from krabi_msgs.srv import StartRecalage
+    _HAS_RECALAGE = True
+except ImportError:
+    _HAS_RECALAGE = False
 
 try:
     from diagnostic_msgs.msg import DiagnosticArray
@@ -41,10 +48,13 @@ try:
 except Exception:
     _CAM_QOS = 1  # fallback: plain integer depth
 
+from rclpy.qos import QoSDurabilityPolicy
+_LATCHED_QOS = QoSProfile(depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
+
 
 class KrabiGuiNode(Node):
     def __init__(self, robot_status, match, camera_state, tirette,
-                 diagnostics=None, publish_tirette: bool = False,
+                 diagnostics=None, pre_match=None, publish_tirette: bool = False,
                  simu: bool = False):
         super().__init__('krabi_gui_node')
         self._robot_status  = robot_status
@@ -52,6 +62,7 @@ class KrabiGuiNode(Node):
         self._camera_state  = camera_state
         self._tirette       = tirette
         self._diagnostics   = diagnostics
+        self._pre_match     = pre_match
 
         self._tf_buffer   = Buffer()
         self._tf_listener = None   # created lazily in enable_tf()
@@ -61,7 +72,8 @@ class KrabiGuiNode(Node):
         self._obstacle_front_msg:  PoseStamped | None = None
         self._obstacle_behind_msg: PoseStamped | None = None
 
-        self.create_subscription(Duration, '/krabi_ns/remaining_time',
+        # Published by main_strategy at the root (not in krabi_ns)
+        self.create_subscription(Duration, '/remaining_time',
                                  self._on_time, 10)
 
         self._cam_topic = None
@@ -100,8 +112,17 @@ class KrabiGuiNode(Node):
         else:
             self.create_subscription(Bool, '/krabi_ns/is_blue', self._on_is_blue, 1)
 
-        self._recalage_pub = self.create_publisher(Bool, '/krabi_ns/recalage', 1)
-        self._start_pub    = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
+        self._recalage_client = None
+        if self._pre_match is not None:
+            self.create_subscription(String, '/krabi_ns/pre_match_state',
+                                     self._on_pre_match_state, _LATCHED_QOS)
+            if _HAS_RECALAGE:
+                self.create_subscription(RecalageZones, '/krabi_ns/recalage_zones',
+                                         self._on_recalage_zones, _LATCHED_QOS)
+                self._recalage_client = self.create_client(
+                    StartRecalage, '/krabi_ns/start_recalage_zone')
+
+        self._start_pub = self.create_publisher(Bool, '/krabi_ns/match_start', 1)
 
     # ------------------------------------------------------------------
     # Page-aware subscription management (called from Qt main thread)
@@ -189,13 +210,22 @@ class KrabiGuiNode(Node):
         self._robot_status.updateElecBattery(msg.voltage, msg.percentage)
 
     def _on_tirette(self, msg: Bool) -> None:
-        self._tirette.updateInserted(msg.data)
+        self._tirette.updateRemoved(msg.data)
 
     def _on_diagnostics(self, msg) -> None:
         self._diagnostics.update_from_diagnostics(msg)
 
     def _on_is_blue(self, msg: Bool) -> None:
         self._match.setTeamColor('blue' if msg.data else 'yellow')
+
+    def _on_pre_match_state(self, msg: String) -> None:
+        self._pre_match.stateReceived.emit(msg.data)
+
+    def _on_recalage_zones(self, msg) -> None:
+        self._pre_match.zonesReceived.emit(
+            [{'name': z.name, 'label': z.label, 'x': z.x, 'y': z.y, 'theta': z.theta}
+             for z in msg.zones],
+            msg.default_zone, list(msg.errors))
 
     # ------------------------------------------------------------------
     # Publishers (called from Qt main thread via slots)
@@ -206,9 +236,18 @@ class KrabiGuiNode(Node):
             m = Bool(); m.data = is_blue
             self._team_pub.publish(m)
 
-    def publish_recalage(self) -> None:
-        m = Bool(); m.data = True
-        self._recalage_pub.publish(m)
+    def start_recalage(self, zone: str) -> None:
+        if self._recalage_client is None or not self._recalage_client.service_is_ready():
+            self._pre_match.recalageAnswered.emit(False, 'le robot ne répond pas')
+            return
+        future = self._recalage_client.call_async(StartRecalage.Request(zone=zone))
+
+        def done(f):
+            try:
+                self._pre_match.recalageAnswered.emit(f.result().success, f.result().message)
+            except Exception as exc:
+                self._pre_match.recalageAnswered.emit(False, str(exc))
+        future.add_done_callback(done)
 
     def publish_start(self) -> None:
         m = Bool(); m.data = True
@@ -216,11 +255,11 @@ class KrabiGuiNode(Node):
 
 
 def start_ros(robot_status, match, camera_state, tirette,
-              diagnostics=None, publish_tirette: bool = False,
+              diagnostics=None, pre_match=None, publish_tirette: bool = False,
               simu: bool = False) -> KrabiGuiNode:
     rclpy.init()
     node = KrabiGuiNode(robot_status, match, camera_state, tirette,
-                        diagnostics=diagnostics,
+                        diagnostics=diagnostics, pre_match=pre_match,
                         publish_tirette=publish_tirette, simu=simu)
     try:
         from rclpy.executors import StaticSingleThreadedExecutor

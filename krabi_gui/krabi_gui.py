@@ -15,12 +15,14 @@ try:
     from .diagnostics     import Diagnostics
     from .camera_provider import CameraProvider, CameraState
     from .tirette         import Tirette
+    from .pre_match       import PreMatch
 except ImportError as err:
     from match           import Match
     from robot_status    import RobotStatus
     from diagnostics     import Diagnostics
     from camera_provider import CameraProvider, CameraState
     from tirette         import Tirette
+    from pre_match       import PreMatch
 
 
 _MAIN_CAM  = '/krabi_ns/krabi_cam/image_raw'
@@ -30,8 +32,8 @@ _DEBUG_CAM = '/krabi_ns/debug_image'
 class _PageController(QObject):
     """Bridges QML page navigation to ROS subscription management."""
 
-    _CARTE_PAGE  = 1
-    _CAMERA_PAGE = 3
+    _MAP_PAGES   = (1, 2)  # Recalage, Carte: need the pose of the robot (TF)
+    _CAMERA_PAGE = 4
 
     cameraTopicChanged = Signal()
 
@@ -48,7 +50,7 @@ class _PageController(QObject):
             self._node.enable_camera()
         else:
             self._node.disable_camera()
-        if index == self._CARTE_PAGE:
+        if index in self._MAP_PAGES:
             self._node.enable_tf()
         else:
             self._node.disable_tf()
@@ -89,12 +91,14 @@ def main() -> int:
     timer.timeout.connect(lambda: None)
 
     # Domain objects
-    match         = Match()
+    match         = Match(color_editable=args.publish_tirette)
     robot_status  = RobotStatus()
     diagnostics   = Diagnostics()
     cam_provider  = CameraProvider()
     camera        = CameraState(cam_provider)
     tirette       = Tirette()
+    pre_match     = PreMatch(tirette, diagnostics)
+    pre_match.restartRequested.connect(diagnostics.restartKrabiColor)
 
     # Start ROS (non-fatal if unavailable)
     node = None
@@ -104,7 +108,7 @@ def main() -> int:
         except ImportError:
             from ros_node import start_ros
         node = start_ros(robot_status, match, camera, tirette,
-                         diagnostics=diagnostics,
+                         diagnostics=diagnostics, pre_match=pre_match,
                          publish_tirette=args.publish_tirette,
                          simu=args.simu)
     except Exception as exc:
@@ -112,7 +116,7 @@ def main() -> int:
               file=sys.stderr)
 
     if node is not None:
-        match.recalageRequested.connect(node.publish_recalage)
+        pre_match.recalageRequested.connect(node.start_recalage)
         if args.publish_tirette:
             match.teamColorChanged.connect(
                 lambda: node.publish_team(match.teamColor == 'blue')
@@ -129,6 +133,7 @@ def main() -> int:
     ctx.setContextProperty('diagnostics',     diagnostics)
     ctx.setContextProperty('camera',          camera)
     ctx.setContextProperty('tirette',         tirette)
+    ctx.setContextProperty('preMatch',        pre_match)
     ctx.setContextProperty('pageController',  page_ctrl)
 
     qml_dir  = Path(__file__).parent / 'qml'

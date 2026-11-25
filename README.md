@@ -12,6 +12,8 @@ IHM for the robot Krabi
 
 Compatible with ROS messages from anywhere, so can be tested from simulation, or from a .mcap record: `ros2 bag play path_to_file.mcap`
 
+Pre-match state banner, Recalage tab and RESTART COLOR: see [RECALAGE.md](https://github.com/VictorDubois/goal_strategy/blob/main/docs/RECALAGE.md) (in French).
+
 To start: source the venv + ROS environment, go to the krabi_gui folder, and run python3 ./krabi_gui.py
 
 On the real robot, there is a service dedicated: [krabi_gui.service](https://github.com/VictorDubois/krabi-startscripts/blob/main/krabi_gui.service)
